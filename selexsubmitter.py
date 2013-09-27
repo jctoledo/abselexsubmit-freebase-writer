@@ -111,24 +111,55 @@ def main(argv):
   #now prepare a write query for the cleanJSON
   writeQuery = writeToFreebase(cleanJson, service_url_write, http, credentials)
 
-#Creates a selex experiment topic
+#Creates an empty selex experiment topic
 def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
+  #1: create a selex experiment topic
   q = {
     "create" :"unconditional",
     "mid" : None,
     "type" : "/base/aptamer/selex_experiment",
-    "b:type" : "/base/aptamer/experiment"
+    "b:type" : "/base/aptamer/experiment",
+    "c:type" : "/base/aptamer/interaction_experiment",
   }
   params = {
     'oauth_token': someCredentials.access_token,
     'query' : json.dumps(q)
   }
-  r = runWriteQuery(params, aServiceUrl, anHttp)
-  if r == None:
-    print "Could not create partitioning method"
+  se_mid = runWriteQuery(params, aServiceUrl, anHttp)
+  if se_mid:
+    #now create the partitioning and recovery methods and attach them 
+    #to the selex experiment topic created earlier
+    #create a partitioning method topic
+    q = {
+      "create" :"unconditional",
+      "mid":None,
+      "type":"/base/aptamer/partitioning_method",
+      "/base/aptamer/partitioning_method/is_partitioning_method_of":{"connect":"insert", "mid":se_mid}
+    }
+    params = {
+      'oauth_token' : someCredentials.access_token,
+      'query': json.dumps(q)
+    }
+    pm_mid = runWriteQuery(params, aServiceUrl, anHttp)
+    #create a recovery method topic
+    q = {
+      "create":"unconditional", "mid":None, 
+      "type":"/base/aptamer/recovery_method_se",
+      "/base/aptamer/recovery_method_se/is_recovery_method_of":{"connect":"insert", "mid":se_mid}
+    }
+    params = {
+      'oauth_token' : someCredentials.access_token,
+      'query': json.dumps(q)
+    }
+    rm_mid = runWriteQuery(params, aServiceUrl, anHttp)
+
+    print "se: "+se_mid
+    print "pm: "+pm_mid
+    print "rm:" +rm_mid
     sys.exit()
-  else:
-    return r
+
+   
+
 
 # Create a partitioning mehtod topic
 # adds the separation methods specified by the parameter: separation_methods_mids
@@ -192,10 +223,14 @@ def runWriteQuery(someParams, aServiceUrl, anHttp):
     r = json.loads(content)
     return r["result"]["mid"]
   else:
+    print resp
+    print content
+    raise Exception("Could not run query!! erno:234442")
+    sys.exit()
     return None
 
 def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
-  #create a selex experiment topic and get its mid
+  #create an empty selex experiment topic and get its mid
   mid = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
   #add the pmid if available
   try:
@@ -266,7 +301,6 @@ def getCleanJson(aServletUrl, aFilePath):
     json_raw = open(aFilePath+'/'+fn, 'r')
     for aline in json_raw:
       fchar = aline[0]
-      
       if fchar == '{':
         data = json.loads(aline)
         if data:
