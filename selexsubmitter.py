@@ -52,10 +52,7 @@ import sys
 import json
 import urllib
 import os.path
-import time
-import pprint
 
-from pprint import pprint
 from urllib import urlencode
 from apiclient import discovery
 from oauth2client import file
@@ -107,7 +104,6 @@ def main(argv):
   # with our good Credentials.
   http = httplib2.Http()
   http = credentials.authorize(http)
-
   # Construct the service object for the interacting with the Freebase API.
   service = discovery.build('freebase', 'v1', http=http)
   #get a list of all of the input files
@@ -288,6 +284,7 @@ def getCleanJson(aServletUrl, aFilePath):
             return rm
           else:
             json_raw.close()
+            raise Exception("Servlet found here: "+aServletUrl+" did not respond!")
             return None
       else:
         continue
