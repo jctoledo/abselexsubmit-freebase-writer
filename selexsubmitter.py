@@ -52,7 +52,9 @@ import sys
 import json
 import urllib
 import os.path
+import pprint
 
+from pprint import pprint
 from urllib import urlencode
 from apiclient import discovery
 from oauth2client import file
@@ -181,21 +183,6 @@ def makeRequestBody(someCredentials, aQuery):
     'query': json.dumps(aQuery)
   }
   return p
-     
-
-def writeAQuery(someCredential, aquery):
-  try:
-    params = {
-      'oauth_token': someCredential.access_token,
-      'query': json.dumps(aquery)
-    }
-    url = service_url_write + '?' + urllib.urlencode(params)
-    resp, content = http.request(url)
-    return resp, content
-
-  except client.AccessTokenRefreshError:
-    print ("The credentials have been revoked or expired, please re-run"
-      "the application to re-authorize")
 
 def runWriteQuery(someParams, aServiceUrl, anHttp):
   url = aServiceUrl+'?'+urllib.urlencode(someParams)
@@ -215,6 +202,9 @@ def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   #create an empty selex experiment topic and get its mid
   mid = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
   #add the pmid if available
+  s =json.dumps(cleanJson)
+  print s
+  sys.exit()
   try:
     pmid = cleanJson["se"]["pmid"]
     pmid = 12345
