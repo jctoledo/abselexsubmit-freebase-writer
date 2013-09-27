@@ -123,10 +123,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
     "b:type" : "/base/aptamer/experiment",
     "c:type" : "/base/aptamer/interaction_experiment",
   }
-  params = {
-    'oauth_token': someCredentials.access_token,
-    'query' : json.dumps(q)
-  }
+  params = makeRequestBody(someCredentials, q)
   se_mid = runWriteQuery(params, aServiceUrl, anHttp)
   if se_mid:
     #now create the partitioning and recovery methods and attach them 
@@ -138,10 +135,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "type":"/base/aptamer/partitioning_method",
       "/base/aptamer/partitioning_method/is_partitioning_method_of":{"connect":"insert", "mid":se_mid}
     }
-    params = {
-      'oauth_token' : someCredentials.access_token,
-      'query': json.dumps(q)
-    }
+    params = makeRequestBody(someCredentials, q)
     pm_mid = runWriteQuery(params, aServiceUrl, anHttp)
     #create a recovery method topic
     q = {
@@ -149,10 +143,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "type":"/base/aptamer/recovery_method_se",
       "/base/aptamer/recovery_method_se/is_recovery_method_of":{"connect":"insert", "mid":se_mid}
     }
-    params = {
-      'oauth_token' : someCredentials.access_token,
-      'query': json.dumps(q)
-    }
+    params = makeRequestBody(someCredentials, q)
     rm_mid = runWriteQuery(params, aServiceUrl, anHttp)
     #create an empty selex condition topic
     q = {
@@ -161,10 +152,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "b:type": "/base/aptamer/experimental_conditions",
       "/base/aptamer/experimental_conditions/are_experimental_conditions_of":{"connect":"insert", "mid":se_mid}
     }
-    params = {
-      'oauth_token' : someCredentials.access_token,
-      'query': json.dumps(q)
-    }
+    params = makeRequestBody(someCredentials, q)
     sc_mid = runWriteQuery(params, aServiceUrl, anHttp)
     if sc_mid:
       #create a selection solution and attach it to the selex conditions topic
@@ -173,10 +161,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
         "type":"/base/aptamer/selection_solution",
         "/base/aptamer/selection_solution/is_selection_solution_of_sc":{"connect":"insert", "mid":sc_mid}
       }
-      params = {
-        'oauth_token' : someCredentials.access_token,
-        'query': json.dumps(q)
-      }
+      params = makeRequestBody(someCredentials, q)
       ss_mid = runWriteQuery(params, aServiceUrl, anHttp)
       if not ss_mid:
         raise Exception ("Could not create selection solution!")
@@ -184,14 +169,18 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
     else:
       raise Exception("Could not create selex conditions!")
       sys.exit()
-    print "se: "+se_mid
-    print "pm: "+pm_mid
-    print "rm: " +rm_mid
-    print "sc: " +sc_mid
-    sys.exit()
+    
+    return se_mid
+  else:
+    raise Exception("Could not create Selex experiment topic!")
+    return None;
 
-   
-
+def makeRequestBody(someCredentials, aQuery):
+  p ={
+    'oauth_token': someCredentials.access_token,
+    'query': json.dumps(aQuery)
+  }
+  return p
 
 # Create a partitioning mehtod topic
 # adds the separation methods specified by the parameter: separation_methods_mids
@@ -202,10 +191,7 @@ def createPartitioningMethodTopic(aServiceUrl, anHttp, someCredentials, separati
     "mid":None,
     "type":"/base/aptamer/partitioning_method"
   }
-  params = {
-    'oauth_token': someCredentials.access_token,
-    'query' : json.dumps(q)
-  }
+  params = makeRequestBody(someCredentials, q)
   url = aServiceUrl+'?'+urllib.urlencode(params)
   resp, content = anHttp.request(url)
   if resp["status"] == '200':
@@ -221,10 +207,7 @@ def createPartitioningMethodTopic(aServiceUrl, anHttp, someCredentials, separati
           "mid": spm
         }
       }
-      params = {
-        'oauth_token':someCredentials.access_token,
-        'query' : json.dumps(q)
-      }
+      params = makeRequestBody(someCredentials, q)
       res = runWriteQuery(p, aServiceUrl, anHttp)
       if res == None:
         print "Could not create partitioning method"
@@ -275,11 +258,8 @@ def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
         "value":str(pmid)
       }
     }
-    p = {
-      'oauth_token' : someCredentials.access_token,
-      'query' : json.dumps(q)
-    }
-    x = runWriteQuery(p, aServiceUrl, anHttp) 
+    params = makeRequestBody(someCredentials, q)
+    x = runWriteQuery(params, aServiceUrl, anHttp) 
     if x == None:
       print "Could not add pmid errno: 234"
       sys.exit()
@@ -295,10 +275,7 @@ def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
         "value": ref
       }
     }
-    p = {
-      'oauth_token' : someCredentials.access_token,
-      'query' : json.dumps(q)
-    }
+    params = makeRequestBody(someCredentials, q)
     if runWriteQuery(p, aServiceUrl, anHttp) == None:
       print "Could not add reference errno: 4353"
       sys.exit()
@@ -314,11 +291,8 @@ def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
         "value": doi
       }
     }
-    p = {
-      'oauth_token' : someCredentials.access_token,
-      'query' : json.dumps(q)
-    }
-    if runWriteQuery(p, aServiceUrl, anHttp) == None:
+    params = makeRequestBody(someCredentials, q)
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       print "Could not add reference errno: 4353"
       sys.exit()
   except KeyError:
