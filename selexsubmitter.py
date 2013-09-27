@@ -201,63 +201,65 @@ def runWriteQuery(someParams, aServiceUrl, anHttp):
 def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   #create an empty selex experiment topic and get its mid
   mid = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
-  #add the pmid if available
-  s =json.dumps(cleanJson)
-  print s
+  #add the reference details from this experiment
+  addReferenceDetails(mid, cleanJson, aServiceUrl, anHttp, someCredentials)
+  print mid
   sys.exit()
+  return mid
+
+#add the reference details to the anMid's selex experiment topic
+# details to be added here are:
+#   pmid, doi or reference string
+def addReferenceDetails(anMid, cleanJson, aServiceUrl, anHttp, someCredentials):
+  #first try the pmid
   try:
     pmid = cleanJson["se"]["pmid"]
-    pmid = 12345
     q = {
-      "mid":mid,
+      "mid":anMid,
       "/base/aptamer/experiment/pubmed_id":{
         "connect":"insert",
         "value":str(pmid)
       }
     }
     params = makeRequestBody(someCredentials, q)
-    x = runWriteQuery(params, aServiceUrl, anHttp) 
-    if x == None:
-      print "Could not add pmid errno: 234"
-      sys.exit()
-  except KeyError :
-    pass
-  #try to add the bibiographic reference
-  try:
-    ref = cleanJson["se"]["reference"]
-    q = {
-      "mid":mid,
-      "/base/aptamer/experiment/has_bibliographic_reference":{
-        "connect" : "insert",
-        "value": ref
-      }
-    }
-    params = makeRequestBody(someCredentials, q)
-    if runWriteQuery(p, aServiceUrl, anHttp) == None:
-      print "Could not add reference errno: 4353"
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
+      raise Exception ("Could not run query! #2433211.3")
       sys.exit()
   except KeyError:
     pass
-  #try doi
+  #now try the doi
   try:
     doi = cleanJson["se"]["doi"]
     q = {
-      "mid":mid,
+      "mid":anMid,
       "/base/aptamer/experiment/digital_object_identifier":{
-        "connect" : "insert",
-        "value": doi
+        "connect":"insert",
+        "value":str(doi)
       }
     }
     params = makeRequestBody(someCredentials, q)
     if runWriteQuery(params, aServiceUrl, anHttp) == None:
-      print "Could not add reference errno: 4353"
+      raise Exception("Could not run query! oi42h")
       sys.exit()
   except KeyError:
     pass
-  
-  print mid
-  return mid
-  
+  #now try the reference
+  try:
+    reference = cleanJson["se"]["reference"]
+    q = {
+      "mid":anMid,
+      "/base/aptamer/experiment/has_bibliographic_reference":{
+        "connect":"insert",
+        "value":str(reference)
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
+      raise Exception("Could not run query! #dslkfj")
+      sys.exit()
+  except KeyError:
+    pass
+
 #This function calls the java servlet that parses the output of selexsubmit form
 def getCleanJson(aServletUrl, aFilePath):
   for fn in os.listdir(aFilePath):
