@@ -266,6 +266,7 @@ def getCleanJson(aServletUrl, aFilePath):
     json_raw = open(aFilePath+'/'+fn, 'r')
     for aline in json_raw:
       fchar = aline[0]
+      
       if fchar == '{':
         data = json.loads(aline)
         if data:
