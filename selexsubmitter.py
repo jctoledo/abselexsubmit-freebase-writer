@@ -112,6 +112,8 @@ def main(argv):
   writeQuery = writeToFreebase(cleanJson, service_url_write, http, credentials)
 
 #Creates an empty selex experiment topic
+#creates the corresponding topics:
+# partitioning method, recovery methods and selex conditions
 def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
   #1: create a selex experiment topic
   q = {
@@ -152,10 +154,40 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       'query': json.dumps(q)
     }
     rm_mid = runWriteQuery(params, aServiceUrl, anHttp)
-
+    #create an empty selex condition topic
+    q = {
+      "create":"unconditional", "mid":None,
+      "type":"/base/aptamer/selex_conditions",
+      "b:type": "/base/aptamer/experimental_conditions",
+      "/base/aptamer/experimental_conditions/are_experimental_conditions_of":{"connect":"insert", "mid":se_mid}
+    }
+    params = {
+      'oauth_token' : someCredentials.access_token,
+      'query': json.dumps(q)
+    }
+    sc_mid = runWriteQuery(params, aServiceUrl, anHttp)
+    if sc_mid:
+      #create a selection solution and attach it to the selex conditions topic
+      q = {
+        "create":"unconditional", "mid":None, 
+        "type":"/base/aptamer/selection_solution",
+        "/base/aptamer/selection_solution/is_selection_solution_of_sc":{"connect":"insert", "mid":sc_mid}
+      }
+      params = {
+        'oauth_token' : someCredentials.access_token,
+        'query': json.dumps(q)
+      }
+      ss_mid = runWriteQuery(params, aServiceUrl, anHttp)
+      if not ss_mid:
+        raise Exception ("Could not create selection solution!")
+        sys.exit()
+    else:
+      raise Exception("Could not create selex conditions!")
+      sys.exit()
     print "se: "+se_mid
     print "pm: "+pm_mid
-    print "rm:" +rm_mid
+    print "rm: " +rm_mid
+    print "sc: " +sc_mid
     sys.exit()
 
    
