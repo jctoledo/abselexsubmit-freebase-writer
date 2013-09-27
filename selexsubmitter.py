@@ -181,39 +181,6 @@ def makeRequestBody(someCredentials, aQuery):
     'query': json.dumps(aQuery)
   }
   return p
-
-# Create a partitioning mehtod topic
-# adds the separation methods specified by the parameter: separation_methods_mids
-# returns the mid of the partitioning topic that has been created
-def createPartitioningMethodTopic(aServiceUrl, anHttp, someCredentials, separation_methods_mids):
-  q = {
-    "create":"unconditional",
-    "mid":None,
-    "type":"/base/aptamer/partitioning_method"
-  }
-  params = makeRequestBody(someCredentials, q)
-  url = aServiceUrl+'?'+urllib.urlencode(params)
-  resp, content = anHttp.request(url)
-  if resp["status"] == '200':
-    #get the mid
-    json_resp = json.loads(content)
-    mid = json_resp["result"]["mid"]
-    #now add the separation methods
-    for spm in separation_methods_mids:
-      q = {
-        "mid": mid,
-        "/base/aptamer/partitioning_method/has_separation_method":{
-          "connect":"insert",
-          "mid": spm
-        }
-      }
-      params = makeRequestBody(someCredentials, q)
-      res = runWriteQuery(p, aServiceUrl, anHttp)
-      if res == None:
-        print "Could not create partitioning method"
-        sys.exit()
-      else:
-        return res
      
 
 def writeAQuery(someCredential, aquery):
