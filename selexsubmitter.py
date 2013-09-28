@@ -311,7 +311,42 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
       sys.exit()
   except KeyError:
     pass
-
+  #add the selection solution's buffering agents
+  try:
+    ba = cleanJson["se"]["selex_conditions"]["buffering_agents"]
+    for aba in ba:
+      q = {
+        "mid":anMidDict["selection_solution"],
+        "/base/aptamer/selection_solution/has_buffering_agent":{
+          "connect":"insert",
+          "name": aba,
+          "type":"/base/aptamer/buffering_agent"
+        }
+      }
+      params = makeRequestBody(someCredentials, q)
+      if runQuery(params, aServiceUrl, anHttp) == None:
+        raise Exception ("Could not run query! 98327492387423")
+        sys.exit()
+  except KeyError:
+    pass
+  #add the selection solution's metal cation conc string
+  try:
+    mcc = cleanJson["se"]["selex_conditions"]["metal_cation_concentration"]
+    for amcc in mcc:
+      q = {
+        "mid":anMidDict["selection_solution"],
+        "/base/aptamer/selection_solution/ionic_strength":{
+          "connect":"insert",
+          "value":str(amcc),
+          "lang": "/lang/en"
+        }
+      }
+      params = makeRequestBody(someCredentials, q)
+      if runQuery(params, aServiceUrl, anHttp) == None:
+        raise Exception ("Could not run query! 98327492387423")
+        sys.exit()
+  except KeyError:
+    pass
 #add the following details:
 # partitioning method
 # recovery method
