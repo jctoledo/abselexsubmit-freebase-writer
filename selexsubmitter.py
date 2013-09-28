@@ -276,7 +276,23 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
       sys.exit()
   except KeyError:
     pass
-  
+  #add the selection solution's ph
+  try:
+    ph = cleanJson["se"]["selex_conditions"]["ph"]
+    q = {
+      "mid":anMidDict["selection_solution"],
+      "/base/aptamer/selection_solution/ph":{
+        "connect":"insert",
+        "value": float(ph)
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    if runQuery(params, aServiceUrl, anHttp) == None:
+      raise Exception ("Could not run query! 4830943")
+      sys.exit()
+  except KeyError:
+    pass
+
 #add the following details:
 # partitioning method
 # recovery method
