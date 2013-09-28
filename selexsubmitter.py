@@ -108,15 +108,22 @@ def main(argv):
   http = credentials.authorize(http)
   # Construct the service object for the interacting with the Freebase API.
   service = discovery.build('freebase', 'v1', http=http)
-  #get a list of all of the input files
-  cleanJson = getCleanJson(servlet_url, inputFilesPath)
-  #now prepare a write query for the cleanJSON
-  writeQuery = writeToFreebase(cleanJson, service_url_write, http, credentials)
+  for fn in os.listdir(inputFilesPath):
+    if fn:
+      cleanJson = getCleanJson(servlet_url, inputFilesPath ,fn)
+      #now prepare a write query for the cleanJSON
+      se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
+      print se_mid
+      sys.exit()
+    
+  
 
 #Creates an empty selex experiment topic
 #creates the corresponding topics:
 # partitioning method, recovery methods and selex conditions
+#returns a dictionary with mids for all its parts
 def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
+  rm = {}
   #1: create a selex experiment topic
   q = {
     "create" :"unconditional",
@@ -126,8 +133,9 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
     "c:type" : "/base/aptamer/interaction_experiment",
   }
   params = makeRequestBody(someCredentials, q)
-  se_mid = runWriteQuery(params, aServiceUrl, anHttp)
+  se_mid = runQuery(params, aServiceUrl, anHttp)
   if se_mid:
+    rm["mid"]= se_mid
     #now create the partitioning and recovery methods and attach them 
     #to the selex experiment topic created earlier
     #create a partitioning method topic
@@ -138,7 +146,8 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "/base/aptamer/partitioning_method/is_partitioning_method_of":{"connect":"insert", "mid":se_mid}
     }
     params = makeRequestBody(someCredentials, q)
-    pm_mid = runWriteQuery(params, aServiceUrl, anHttp)
+    pm_mid = runQuery(params, aServiceUrl, anHttp)
+    rm["partitioning_method"] = pm_mid
     #create a recovery method topic
     q = {
       "create":"unconditional", "mid":None, 
@@ -146,7 +155,8 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "/base/aptamer/recovery_method_se/is_recovery_method_of":{"connect":"insert", "mid":se_mid}
     }
     params = makeRequestBody(someCredentials, q)
-    rm_mid = runWriteQuery(params, aServiceUrl, anHttp)
+    rm_mid = runQuery(params, aServiceUrl, anHttp)
+    rm["recovery_method"] = rm_mid
     #create an empty selex condition topic
     q = {
       "create":"unconditional", "mid":None,
@@ -155,7 +165,8 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "/base/aptamer/experimental_conditions/are_experimental_conditions_of":{"connect":"insert", "mid":se_mid}
     }
     params = makeRequestBody(someCredentials, q)
-    sc_mid = runWriteQuery(params, aServiceUrl, anHttp)
+    sc_mid = runQuery(params, aServiceUrl, anHttp)
+    rm["selex_conditions"] = sc_mid
     if sc_mid:
       #create a selection solution and attach it to the selex conditions topic
       q = {
@@ -164,7 +175,8 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
         "/base/aptamer/selection_solution/is_selection_solution_of_sc":{"connect":"insert", "mid":sc_mid}
       }
       params = makeRequestBody(someCredentials, q)
-      ss_mid = runWriteQuery(params, aServiceUrl, anHttp)
+      ss_mid = runQuery(params, aServiceUrl, anHttp)
+      rm["selection_solution"] = ss_mid
       if not ss_mid:
         raise Exception ("Could not create selection solution!")
         sys.exit()
@@ -172,7 +184,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       raise Exception("Could not create selex conditions!")
       sys.exit()
     
-    return se_mid
+    return rm
   else:
     raise Exception("Could not create Selex experiment topic!")
     return None;
@@ -184,7 +196,7 @@ def makeRequestBody(someCredentials, aQuery):
   }
   return p
 
-def runWriteQuery(someParams, aServiceUrl, anHttp):
+def runQuery(someParams, aServiceUrl, anHttp):
   url = aServiceUrl+'?'+urllib.urlencode(someParams)
   resp, content = anHttp.request(url)
   if resp["status"] == '200':
@@ -192,6 +204,7 @@ def runWriteQuery(someParams, aServiceUrl, anHttp):
     r = json.loads(content)
     return r["result"]["mid"]
   else:
+    print someParams
     print resp
     print content
     raise Exception("Could not run query!! erno:234442")
@@ -199,30 +212,93 @@ def runWriteQuery(someParams, aServiceUrl, anHttp):
     return None
 
 def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
+
   #create an empty selex experiment topic and get its mid
-  mid = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
+  mid_dict = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
   #add the reference details from this experiment
-  addReferenceDetails(mid, cleanJson, aServiceUrl, anHttp, someCredentials)
-  print mid
-  sys.exit()
-  return mid
+  addReferenceDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
+
+  addSelexDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials )
+  
+  return mid_dict
+
+#add the following details:
+# partitioning method
+# recovery method
+# selex method
+def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
+  #add the selex method
+  try:
+    sm = cleanJson["se"]["selex_methods"]
+    for asm in sm:
+      q = {
+        "mid": anMidDict["mid"],
+        "/base/aptamer/selex_experiment/has_selex_method":{
+          "connect":"insert",
+          "name": str(asm),
+          "type":"/base/aptamer/selex_method"
+        }
+      }
+      params = makeRequestBody(someCredentials, q)
+      if runQuery(params, aServiceUrl, anHttp) == None:
+        raise Exception("Could not run query! 500-3")
+        sys.exit()
+  except KeyError:
+    pass
+  #now add the partitioning method
+  try:
+    pm_names = cleanJson["se"]["partitioning_methods"]
+    for an in pm_names:
+      q = {
+        "mid": anMidDict["partitioning_method"],
+        "/base/aptamer/partitioning_method/has_separation_method":{
+          "connect":"insert",
+          "name": an,
+          "type":"/base/aptamer/separation_methods"
+        } 
+      }
+      params = makeRequestBody(someCredentials, q)
+      if runQuery(params, aServiceUrl, anHttp) == None:
+        raise Exception("Could not run query! 113")
+        sys.exit()
+  except KeyError:
+    pass
+  #now add the recovery methods
+  try:
+    rm_names = cleanJson["se"]["recovery_methods"]
+    for an in rm_names:
+      q ={
+        "mid": anMidDict["recovery_method"],
+        "/base/aptamer/recovery_method_se/has_recovery_method":{
+          "connect":"insert",
+          "name":an,
+          "type":"/base/aptamer/recovery_methods"
+          }
+      }
+      p = makeRequestBody(someCredentials, q)
+      if runQuery(p, aServiceUrl, anHttp) == None:
+        raise Exception("Could not run query! 324")
+        sys.exit()
+  except KeyError:
+    pass
+
 
 #add the reference details to the anMid's selex experiment topic
 # details to be added here are:
 #   pmid, doi or reference string
-def addReferenceDetails(anMid, cleanJson, aServiceUrl, anHttp, someCredentials):
+def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
   #first try the pmid
   try:
     pmid = cleanJson["se"]["pmid"]
     q = {
-      "mid":anMid,
+      "mid":anMidDict["mid"],
       "/base/aptamer/experiment/pubmed_id":{
         "connect":"insert",
         "value":str(pmid)
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runWriteQuery(params, aServiceUrl, anHttp) == None:
+    if runQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! #2433211.3")
       sys.exit()
   except KeyError:
@@ -231,14 +307,14 @@ def addReferenceDetails(anMid, cleanJson, aServiceUrl, anHttp, someCredentials):
   try:
     doi = cleanJson["se"]["doi"]
     q = {
-      "mid":anMid,
+      "mid":anMidDict["mid"],
       "/base/aptamer/experiment/digital_object_identifier":{
         "connect":"insert",
         "value":str(doi)
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runWriteQuery(params, aServiceUrl, anHttp) == None:
+    if runQuery(params, aServiceUrl, anHttp) == None:
       raise Exception("Could not run query! oi42h")
       sys.exit()
   except KeyError:
@@ -247,47 +323,46 @@ def addReferenceDetails(anMid, cleanJson, aServiceUrl, anHttp, someCredentials):
   try:
     reference = cleanJson["se"]["reference"]
     q = {
-      "mid":anMid,
+      "mid":anMidDict["mid"],
       "/base/aptamer/experiment/has_bibliographic_reference":{
         "connect":"insert",
         "value":str(reference)
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runWriteQuery(params, aServiceUrl, anHttp) == None:
+    if runQuery(params, aServiceUrl, anHttp) == None:
       raise Exception("Could not run query! #dslkfj")
       sys.exit()
   except KeyError:
     pass
 
 #This function calls the java servlet that parses the output of selexsubmit form
-def getCleanJson(aServletUrl, aFilePath):
-  for fn in os.listdir(aFilePath):
-    json_raw = open(aFilePath+'/'+fn, 'r')
-    for aline in json_raw:
-      fchar = aline[0]
-      if fchar == '{':
-        data = json.loads(aline)
-        if data:
-          print 'processing ' + fn + '...'
-          #prepare the query
-          params = {
-            "se" : aline,
-            "fn" : aFilePath
-          }
-          #now call the servlet
-          f = urllib.urlopen(aServletUrl, urlencode(params))
-          output = f.read().replace("\\\"", "")
-          if output:
-            json_raw.close()
-            rm = json.loads(output)
-            return rm
-          else:
-            json_raw.close()
-            raise Exception("Servlet found here: "+aServletUrl+" did not respond!")
-            return None
-      else:
-        continue
+def getCleanJson(aServletUrl, aDirPath,aFileName):
+  json_raw = open(aDirPath+'/'+aFileName, 'r')
+  for aline in json_raw:
+    fchar = aline[0]
+    if fchar == '{':
+      data = json.loads(aline)
+      if data:
+        print 'processing ' + aFileName + '...'
+        #prepare the query
+        params = {
+          "se" : aline,
+          "fn" : aDirPath+'/'+aFileName
+        }
+        #now call the servlet
+        f = urllib.urlopen(aServletUrl, urlencode(params))
+        output = f.read().replace("\\\"", "")
+        if output:
+          json_raw.close()
+          rm = json.loads(output)
+          return rm
+        else:
+          json_raw.close()
+          raise Exception("Servlet found here: "+aServletUrl+" did not respond!")
+          return None
+    else:
+      continue
 
 if __name__ == '__main__':
   main(sys.argv)
