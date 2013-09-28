@@ -263,11 +263,14 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
   #add the template bias
   try:
     tb = cleanJson["se"]["selex_conditions"]["template_bias"]
+    tb_bool = False
+    if tb.lower == "yes":
+      tb_bool = True
     q = {
       "mid" : anMidDict["selex_conditions"],
-      "/base/aptamer/selex_conditions/has_selection_solution":{
+      "/base/aptamer/selex_conditions/has_template_bias":{
         "connect":"insert",
-        "value": str(tb)
+        "value": tb_bool
       }
     }
     params = makeRequestBody(someCredentials, q)
@@ -289,6 +292,22 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
     params = makeRequestBody(someCredentials, q)
     if runQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! 4830943")
+      sys.exit()
+  except KeyError:
+    pass
+  #add the selection solution's temperature
+  try:
+    temp = cleanJson["se"]["selex_conditions"]["temperature"]
+    q = {
+      "mid":anMidDict["selection_solution"],
+      "/base/aptamer/selection_solution/temperature":{
+        "connect":"insert",
+        "value":float(temp)
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    if runQuery(params, aServiceUrl, anHttp) == None:
+      raise Exception ("Could not run query! 43543543")
       sys.exit()
   except KeyError:
     pass
