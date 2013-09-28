@@ -116,7 +116,87 @@ def main(argv):
       print se_mid
       sys.exit()
     
-  
+#Creates an interaction topic including:
+# an affinity experiment 
+# aptamer target
+# aptamers
+def createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredentials):
+  rm = {}
+  q = {
+    "create":"unconditional",
+    "mid":None,
+    "type":"/base/aptamer/interaction",
+    "b:type":"/base/aptamer/experimental_outcome",
+    "/base/aptamer/experimental_outcome/is_outcome_of":{
+      "connect":"insert",
+      "mid" : aSelexExperimentMid
+    }
+  }
+  params = makeRequestBody(someCredentials, q)
+  int_mid = runQuery(params, aServiceUrl, anHttp)
+  if int_mid:
+    #create an affinity expeirment
+    int_dict = createAffinityExperimentTopic(int_mid, aServiceUrl, anHttp, someCredentials)
+    #connect it back to the interaction 
+    #create a kd topic
+    #connect the kd topic it to the affinity experiment
+    #connect the affinity experiment's kd to the interaction
+    p=1
+
+def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCredentials):
+  rm = {}
+  q={
+    "create":"unconditional",
+    "mid":None,
+    "type":"/base/aptamer/affinity_experiment",
+    "b:type":"/base/aptamer/experiment"
+  }
+  params = makeRequestBody(someCredentials, q)
+  afe_mid = runQuery(params, aServiceUrl, anHttp)
+  if afe_mid == None:
+    raise Exception("Could not create affinity experiment!")
+  if afe_mid:
+    rm["mid"] = afe_mid
+    #now create a kd topic
+    q={
+      "create":"unconditional",
+      "mid":None,
+      "type":"/base/aptamer/dissociation_constant",
+      "b:type":"/base/aptamer/experimental_outcome",
+      "/base/aptamer/experimental_outcome/is_outcome_of":{
+        "connect":"insert",
+        "mid":afe_mid
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    kd_mid = runQuery(params, aServiceUrl, anHttp)
+    if kd_mid == None:
+      raise Exception ("Could not create kd!")
+    if kd_mid:
+      rm["kd_mid"] = kd_mid
+      #connect the kd to the affinity expeirment
+      q={
+        "mid":afe_mid,
+        "/base/aptamer/experiment/has_outcome":{
+          "connect":"insert",
+          "mid" : kd_mid,
+        }
+      }
+      params = makeRequestBody(someCredentials, q)
+      x = runQuery(params, aServiceUrl, anHttp)
+      #connect the kd back to the interaction
+      q = {
+        "mid":kd_mid,
+        "/base/aptamer/dissociation_constant/is_dissociation_constant_of":{
+          "connect":"insert",
+          "mid": anInteractionMid
+        }
+      }
+      params = makeRequestBody(someCredentials, q)
+      x = runQuery(params, aServiceUrl, anHttp)
+
+
+
 
 #Creates an empty selex experiment topic
 #creates the corresponding topics:
@@ -219,7 +299,14 @@ def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   addReferenceDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
   addSelexDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
   addSelexConditions(mid_dict, cleanJson, aServiceUrl, anHttp,someCredentials)
+  addInteractions(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
   return mid_dict
+
+
+def addInteractions(anMidDict,cleanJson, aServiceUrl, anHttp, someCredentials):
+  #create an interaction topic
+  createInteractionTopic(anMidDict["mid"], aServiceUrl, anHttp, someCredentials)
+  pass
 
 # add the follwing details:
 # number of rounds
