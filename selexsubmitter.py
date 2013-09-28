@@ -217,11 +217,66 @@ def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   mid_dict = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
   #add the reference details from this experiment
   addReferenceDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
-
-  addSelexDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials )
-  
+  addSelexDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
+  addSelexConditions(mid_dict, cleanJson, aServiceUrl, anHttp,someCredentials)
   return mid_dict
 
+# add the follwing details:
+# number of rounds
+# template sequence
+# template bias
+# has template bias
+# selection solution
+def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
+  #add the number of rounds
+  try:
+    nor = cleanJson["se"]["selex_conditions"]["numOfSelectionRounds"]
+    q = {
+      "mid": anMidDict["selex_conditions"],
+      "/base/aptamer/selex_conditions/number_of_selection_rounds": {
+        "connect":"insert",
+        "value":int(nor)
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    if runQuery(params, aServiceUrl, anHttp) == None:
+      raise Exception ("Could not run query! 9984")
+      sys.exit()
+  except KeyError:
+    pass
+  #add the template sequence
+  try:
+    ts = cleanJson["se"]["selex_conditions"]["template_sequence"]
+    q = {
+      "mid" : anMidDict["selex_conditions"],
+      "/base/aptamer/selex_conditions/has_template_sequence":{
+        "connect":"insert",
+        "value":str(ts)
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    if runQuery(params, aServiceUrl, anHttp) == None:
+      raise Exception ("Could not run query! 99843234")
+      sys.exit()
+  except KeyError:
+    pass
+  #add the template bias
+  try:
+    tb = cleanJson["se"]["selex_conditions"]["template_bias"]
+    q = {
+      "mid" : anMidDict["selex_conditions"],
+      "/base/aptamer/selex_conditions/has_selection_solution":{
+        "connect":"insert",
+        "value": str(tb)
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    if runQuery(params, aServiceUrl, anHttp) == None:
+      raise Exception ("Could not run query! 4830943")
+      sys.exit()
+  except KeyError:
+    pass
+  
 #add the following details:
 # partitioning method
 # recovery method
@@ -281,7 +336,6 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
         sys.exit()
   except KeyError:
     pass
-
 
 #add the reference details to the anMid's selex experiment topic
 # details to be added here are:
