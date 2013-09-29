@@ -136,8 +136,8 @@ def createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredent
     sys.exit()
   return r
   
-#Creates an empty affinityExperiment topic and an empty dissociation constant topic
-# and attaches them 
+#Creates an empty affinityExperiment topic and returs its mid
+# attaches the created topic to the given interaction topic mid
 def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCredentials):
   rm = {}
   q={
@@ -195,8 +195,27 @@ def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCre
       runQuery(params, aServiceUrl, anHttp)
   return rm
 
-
-
+#creates an empty dissociation constant topic and returns it 
+# atttaches it to the given affinity experiment mid
+def createDissociationConstantTopic(aff_exp_mid, ServiceUrl, anHttp, someCredentials):
+  q = {
+    "create":"unconditional",
+    "mid":None,
+    "type":"/base/aptamer/dissociation_constant",
+    "b:type":"/base/aptamer/experimental_outcome",
+    "/base/aptamer/experimental_outcome/is_outcome_of":{
+      "connect":"insert",
+      "mid":aff_exp_mid
+    }
+  }
+  params = makeRequestBody(someCredentials, q)
+  kd_mid = runQuery(params, aServiceUrl, anHttp)
+  if kd_mid == None:
+    raise Exception("Cannot create kd topic!")
+    sys.exit()
+  else:
+    return kd_mid
+  
 
 #Creates an empty selex experiment topic
 #creates the corresponding topics:
