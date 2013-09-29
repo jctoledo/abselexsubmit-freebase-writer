@@ -116,10 +116,7 @@ def main(argv):
       print se_mid
       sys.exit()
     
-#Creates an interaction topic including:
-# an affinity experiment 
-# aptamer target
-# aptamers
+#Creates a empty interaction topic including and returns the mid
 def createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredentials):
   rm = {}
   q = {
@@ -133,23 +130,25 @@ def createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredent
     }
   }
   params = makeRequestBody(someCredentials, q)
-  int_mid = runQuery(params, aServiceUrl, anHttp)
-  if int_mid:
-    #create an affinity expeirment
-    int_dict = createAffinityExperimentTopic(int_mid, aServiceUrl, anHttp, someCredentials)
-    #connect it back to the interaction 
-    #create a kd topic
-    #connect the kd topic it to the affinity experiment
-    #connect the affinity experiment's kd to the interaction
-    p=1
-
+  r = runQuery(params, aServiceUrl, anHttp)
+  if r == None:
+    raise Exception ("Could not create interaction topic!")
+    sys.exit()
+  return r
+  
+#Creates an empty affinityExperiment topic and an empty dissociation constant topic
+# and attaches them 
 def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCredentials):
   rm = {}
   q={
     "create":"unconditional",
     "mid":None,
     "type":"/base/aptamer/affinity_experiment",
-    "b:type":"/base/aptamer/experiment"
+    "b:type":"/base/aptamer/experiment",
+    "/base/aptamer/affinity_experiment/confirms":{
+      "connect":"insert",
+      "mid":anInteractionMid
+    }
   }
   params = makeRequestBody(someCredentials, q)
   afe_mid = runQuery(params, aServiceUrl, anHttp)
@@ -183,7 +182,7 @@ def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCre
         }
       }
       params = makeRequestBody(someCredentials, q)
-      x = runQuery(params, aServiceUrl, anHttp)
+      runQuery(params, aServiceUrl, anHttp)
       #connect the kd back to the interaction
       q = {
         "mid":kd_mid,
@@ -193,7 +192,8 @@ def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCre
         }
       }
       params = makeRequestBody(someCredentials, q)
-      x = runQuery(params, aServiceUrl, anHttp)
+      runQuery(params, aServiceUrl, anHttp)
+  return rm
 
 
 
@@ -304,8 +304,15 @@ def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
 
 
 def addInteractions(anMidDict,cleanJson, aServiceUrl, anHttp, someCredentials):
-  #create an interaction topic
-  createInteractionTopic(anMidDict["mid"], aServiceUrl, anHttp, someCredentials)
+  #iterate over the interactions
+  for ai in cleanJson["interactions"]:
+    #create an empty interaction topic
+    int_mid = createInteractionTopic(anMidDict["mid"], aServiceUrl, anHttp, someCredentials)
+    #now iterate over the affinity experiments in clean json
+    for ae in ai["affinity_experiments"]:
+      #create an empty affinity experiment topic
+      aff_mid = createAffinityExperimentTopic(int_mid, aServiceUrl, anHttp, someCredentials)
+      afe = cleanJson["intercations"]
   pass
 
 # add the follwing details:
