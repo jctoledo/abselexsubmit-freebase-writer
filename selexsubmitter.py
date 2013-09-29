@@ -139,7 +139,6 @@ def createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredent
 #Creates an empty affinityExperiment topic and returs its mid
 # attaches the created topic to the given interaction topic mid
 def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCredentials):
-  rm = {}
   q={
     "create":"unconditional",
     "mid":None,
@@ -154,46 +153,48 @@ def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCre
   afe_mid = runQuery(params, aServiceUrl, anHttp)
   if afe_mid == None:
     raise Exception("Could not create affinity experiment!")
-  if afe_mid:
-    rm["mid"] = afe_mid
-    #now create a kd topic
-    q={
-      "create":"unconditional",
-      "mid":None,
-      "type":"/base/aptamer/dissociation_constant",
-      "b:type":"/base/aptamer/experimental_outcome",
-      "/base/aptamer/experimental_outcome/is_outcome_of":{
-        "connect":"insert",
-        "mid":afe_mid
-      }
-    }
-    params = makeRequestBody(someCredentials, q)
-    kd_mid = runQuery(params, aServiceUrl, anHttp)
-    if kd_mid == None:
-      raise Exception ("Could not create kd!")
-    if kd_mid:
-      rm["kd_mid"] = kd_mid
-      #connect the kd to the affinity expeirment
-      q={
-        "mid":afe_mid,
-        "/base/aptamer/experiment/has_outcome":{
-          "connect":"insert",
-          "mid" : kd_mid,
-        }
-      }
-      params = makeRequestBody(someCredentials, q)
-      runQuery(params, aServiceUrl, anHttp)
-      #connect the kd back to the interaction
-      q = {
-        "mid":kd_mid,
-        "/base/aptamer/dissociation_constant/is_dissociation_constant_of":{
-          "connect":"insert",
-          "mid": anInteractionMid
-        }
-      }
-      params = makeRequestBody(someCredentials, q)
-      runQuery(params, aServiceUrl, anHttp)
-  return rm
+    sys.exit()
+  else:
+    return afe_mid
+  # if afe_mid:
+  #   rm["mid"] = afe_mid
+  #   #now create a kd topic
+  #   q={
+  #     "create":"unconditional",
+  #     "mid":None,
+  #     "type":"/base/aptamer/dissociation_constant",
+  #     "b:type":"/base/aptamer/experimental_outcome",
+  #     "/base/aptamer/experimental_outcome/is_outcome_of":{
+  #       "connect":"insert",
+  #       "mid":afe_mid
+  #     }
+  #   }
+  #   params = makeRequestBody(someCredentials, q)
+  #   kd_mid = runQuery(params, aServiceUrl, anHttp)
+  #   if kd_mid == None:
+  #     raise Exception ("Could not create kd!")
+  #   if kd_mid:
+  #     rm["kd_mid"] = kd_mid
+  #     #connect the kd to the affinity expeirment
+  #     q={
+  #       "mid":afe_mid,
+  #       "/base/aptamer/experiment/has_outcome":{
+  #         "connect":"insert",
+  #         "mid" : kd_mid,
+  #       }
+  #     }
+  #     params = makeRequestBody(someCredentials, q)
+  #     runQuery(params, aServiceUrl, anHttp)
+  #     #connect the kd back to the interaction
+  #     q = {
+  #       "mid":kd_mid,
+  #       "/base/aptamer/dissociation_constant/is_dissociation_constant_of":{
+  #         "connect":"insert",
+  #         "mid": anInteractionMid
+  #       }
+  #     }
+  #     params = makeRequestBody(someCredentials, q)
+  #     runQuery(params, aServiceUrl, anHttp)
 
 #creates an empty dissociation constant topic and returns it 
 # atttaches it to the given affinity experiment mid
