@@ -613,7 +613,6 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
     #now add the aptamers to the interaction
     try:
       for anApt in ai["aptamers"]:
-        #create an empty Aptamer topic
         apt_mid = createAptamerTopic(int_mid, anApt["polymer_type"], anApt["sequence"], aServiceUrl, anHttp, someCredentials)
         #now add the mutational analysis to the aptamer topic
         try:
@@ -686,6 +685,19 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             sys.exit()
         except KeyError:
           pass
+      #now add the collective or pairwise interaction type
+      int_type = "/base/aptamer/pairwise_interaction"
+      if len(ai["aptamers"]) > 1:
+        int_type = "/base/aptamer/collective_interaction"
+      q={
+        "mid":int_mid,
+        "w:type":int_type
+      }
+      p = makeRequestBody(someCredentials, q)
+      r = runQuery(p, aServiceUrl, anHttp)
+      if r == None:
+        raise Exception("Could not add intercaction type")
+        sys.exit()
     except KeyError:
       pass
 
