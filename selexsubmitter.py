@@ -186,6 +186,50 @@ def createAffinityConditions(anAffinityExperimentMid, aServiceUrl, anHttp, someC
     else:
       return rm
 
+#creates an aptamer topic and connects it to the passed in interaction mid. 
+#Uses the given aptamer type, mutational analysis and sequence
+def createAptamerTopic(anInteractionMid, aType, aSequence, aServiceUrl, anHttp, someCredentials):
+  seq_len = len(aSequence)
+  at = ""
+  if aType.lower() == "dna":
+    at = "/base/aptamer/dna"
+  if aType.lower() == "rna":
+    at = "/base/aptamer/rna"
+  if len(at):
+    q = {
+      "create":"unconditional",
+      "mid":None,
+      "type":"/base/aptamer/interactor",
+      "b:type":"/base/aptamer/aptamer",
+      "c:type":"/base/aptamer/linear_polymer",
+      "d:type":"/chemistry/chemical_compound",
+      "e:type":at,
+      "f:type":"/base/aptamer/nucleic_acid",
+      "/base/aptamer/interactor/is_participant_in":{
+        "connect":"insert",
+        "mid":anInteractionMid
+      },
+      "/base/aptamer/linear_polymer/sequence":{
+        "connect":"insert",
+        "value": aSequence
+      },
+      "/base/aptamer/linear_polymer/sequence_length":{
+        "connect":"insert",
+        "value":int(seq_len)
+      }
+    }
+    p = makeRequestBody(someCredentials, q)
+    r = runQuery(p, aServiceUrl, anHttp)
+    if r == None:
+      raise Exception("Could not create aptamer topic")
+      sys.exit()
+    else:
+      return r
+  else:
+    raise Exception("Not a valid aptamer type was passed in")
+    sys.exit()
+
+#creates an aptamer target topic and connects it to a passed in interaction mid. Uses the given name aswell
 def createAptamerTargetTopic(anInteractionMid, aTargetName,aServiceUrl,anHttp,someCredentials):
   q = {
     "create":"unconditional",
@@ -566,11 +610,84 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
     aptamer_target_name = ai["aptamer_target"]["name"]
     #create an aptamer target topic and add the passed in name
     att_mid = createAptamerTargetTopic(int_mid, aptamer_target_name, aServiceUrl, anHttp, someCredentials)
-    
-    
-
-
-  pass
+    #now add the aptamers to the interaction
+    try:
+      for anApt in ai["aptamers"]:
+        #create an empty Aptamer topic
+        apt_mid = createAptamerTopic(int_mid, anApt["polymer_type"], anApt["sequence"], aServiceUrl, anHttp, someCredentials)
+        #now add the mutational analysis to the aptamer topic
+        try:
+          ma = True
+          if anApt["mutational_analysis"].lower() == "no":
+            ma = False
+          q={
+            "mid":apt_mid,
+            "/base/aptamer/aptamer/has_mutational_analysis":{
+              "connect":"insert",
+              "value": ma
+            }
+          }
+          p = makeRequestBody(someCredentials, q)
+          r = runQuery(p, aServiceUrl, anHttp)
+          if r == None:
+            raise Exception("Could not add mutational_analysis ")
+            sys.exit()
+        except KeyError:
+          pass
+        #now add the secondary structures 
+        try:
+          for ssn in anApt["secondary_structures_names"]:
+            q={
+              "mid":apt_mid,
+              "/base/aptamer/nucleic_acid/secondary_structure":{
+                "connect":"insert",
+                "name": str(ssn),
+                "type":"/base/aptamer/nucleic_acid_secondary_structure"
+              }
+            }
+            p = makeRequestBody(someCredentials, q)
+            r = runQuery(p, aServiceUrl, anHttp)
+            if r == None:
+              raise Exception("Could not add secondary strucutres")
+              sys.exit()
+        except KeyError:
+          pass
+        #now add the application
+        try:
+          q = {
+            "mid":apt_mid,
+            "/base/aptamer/application":{
+              "connect":"insert",
+              "value":str(anApt["application"]),
+              "lang":"/lang/en"
+            }
+          }
+          p = makeRequestBody(someCredentials, q)
+          r = runQuery(p, aServiceUrl, anHttp)
+          if r == None:
+            raise Exception("Could not add application")
+            sys.exit()
+        except KeyError:
+          pass
+        #now add the sequence pattern
+        try:
+          q = {
+            "mid":apt_mid,
+            "/base/aptamer/linear_polymer/sequence_pattern":{
+              "connect":"insert",
+              "value":str(anApt["sequence_pattern"]),
+              "lang":"/lang/en"
+            }
+          }
+          p = makeRequestBody(someCredentials, q)
+          r = runQuery(p, aServiceUrl, anHttp)
+          if r == None:
+            raise Exception("Could not add sequence pattern")
+            sys.exit()
+        except KeyError:
+          pass
+    except KeyError:
+      pass
 
 # add the follwing details:
 # number of rounds
