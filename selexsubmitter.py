@@ -186,6 +186,31 @@ def createAffinityConditions(anAffinityExperimentMid, aServiceUrl, anHttp, someC
     else:
       return rm
 
+def createAptamerTargetTopic(anInteractionMid, aTargetName,aServiceUrl,anHttp,someCredentials):
+  q = {
+    "create":"unconditional",
+    "mid":None,
+    "type":"/base/aptamer/interactor",
+    "b:type":"/base/aptamer/aptamer_target",
+    "c:type" :"/chemistry/chemical_compound",
+    "/base/aptamer/interactor/is_participant_in":{
+      "connect":"insert",
+      "mid":anInteractionMid
+    },
+    "name":{
+      "connect":"insert",
+      "value" : str(aTargetName),
+      "lang":"/lang/en"
+    }
+  }
+  p = makeRequestBody(someCredentials, q)
+  r = runQuery(p, aServiceUrl, anHttp)
+  if r == None:
+    raise Exception("Could not create aptamer target topic")
+    sys.exit()
+  else:
+    return r
+
 #Creates an empty affinityExperiment topic and returs its mid
 # attaches the created topic to the given interaction topic mid
 def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCredentials):
@@ -206,45 +231,6 @@ def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCre
     sys.exit()
   else:
     return afe_mid
-  # if afe_mid:
-  #   rm["mid"] = afe_mid
-  #   #now create a kd topic
-  #   q={
-  #     "create":"unconditional",
-  #     "mid":None,
-  #     "type":"/base/aptamer/dissociation_constant",
-  #     "b:type":"/base/aptamer/experimental_outcome",
-  #     "/base/aptamer/experimental_outcome/is_outcome_of":{
-  #       "connect":"insert",
-  #       "mid":afe_mid
-  #     }
-  #   }
-  #   params = makeRequestBody(someCredentials, q)
-  #   kd_mid = runQuery(params, aServiceUrl, anHttp)
-  #   if kd_mid == None:
-  #     raise Exception ("Could not create kd!")
-  #   if kd_mid:
-  #     rm["kd_mid"] = kd_mid
-  #     #connect the kd to the affinity expeirment
-  #     q={
-  #       "mid":afe_mid,
-  #       "/base/aptamer/experiment/has_outcome":{
-  #         "connect":"insert",
-  #         "mid" : kd_mid,
-  #       }
-  #     }
-  #     params = makeRequestBody(someCredentials, q)
-  #     runQuery(params, aServiceUrl, anHttp)
-  #     #connect the kd back to the interaction
-  #     q = {
-  #       "mid":kd_mid,
-  #       "/base/aptamer/dissociation_constant/is_dissociation_constant_of":{
-  #         "connect":"insert",
-  #         "mid": anInteractionMid
-  #       }
-  #     }
-  #     params = makeRequestBody(someCredentials, q)
-  #     runQuery(params, aServiceUrl, anHttp)
 
 #Create an empty floating point range topic 
 def createFloatingPointRangeTopic(aKdMid, aServiceUrl, anHttp, someCredentials):
@@ -576,6 +562,14 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
           sys.exit()
       except KeyError:
         pass
+    #now find  the aptamer target name from the input
+    aptamer_target_name = ai["aptamer_target"]["name"]
+    #create an aptamer target topic and add the passed in name
+    att_mid = createAptamerTargetTopic(int_mid, aptamer_target_name, aServiceUrl, anHttp, someCredentials)
+    
+    
+
+
   pass
 
 # add the follwing details:
