@@ -115,10 +115,20 @@ def main(argv):
       se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
       print se_mid
       sys.exit()
-    
+
+def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
+  #create an empty selex experiment topic and get its mid
+  mid_dict = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
+  #add the reference details from this experiment
+  addReferenceDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
+  addSelexDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
+  addSelexConditions(mid_dict, cleanJson, aServiceUrl, anHttp,someCredentials)
+  addInteractions(mid_dict["mid"], cleanJson, aServiceUrl, anHttp, someCredentials)
+  return mid_dict
+
 #Creates a empty interaction topic including and returns the mid
+# and connects it to the given selex experiment mid
 def createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredentials):
-  rm = {}
   q = {
     "create":"unconditional",
     "mid":None,
@@ -135,7 +145,47 @@ def createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredent
     raise Exception ("Could not create interaction topic!")
     sys.exit()
   return r
-  
+
+#creates an affinity conditions topic and its corresponding binding solution
+# and connects it to the given affinity experiment mid and returns a dictionary of the mids
+def createAffinityConditions(anAffinityExperimentMid, aServiceUrl, anHttp, someCredentials):
+  rm = {}
+  q = {
+    "create":"unconditional",
+    "mid":None,
+    "type":"/base/aptamer/affinity_conditions",
+    "b:type":"/base/aptamer/experimental_conditions",
+    "/base/aptamer/experimental_conditions/are_experimental_conditions_of":{
+      "connect":"insert",
+      "mid":anAffinityExperimentMid
+    }
+  }
+  params = makeRequestBody(someCredentials, q)
+  aff_cond_mid = runQuery(params, aServiceUrl, anHttp)
+  if aff_cond_mid == None:
+    raise Exception("could not create affinity conditions!")
+    sys.exit()
+  else:
+    rm["mid"] = aff_cond_mid
+    #create a binding solution and attach it 
+    q={
+      "create":"unconditional",
+      "mid":None,
+      "type":"/base/aptamer/binding_solution",
+      "/base/aptamer/biding_solution/is_binding_solution_of":{
+        "connect":"insert",
+        "mid": aff_cond_mid
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    bs_mid = runQuery(params, aServiceUrl, anHttp)
+    rm["binding_solution"] = bs_mid
+    if bs_mid == None:
+      raise Exception("Could not create bidning solution topic!")
+      sys.exit()
+    else:
+      return rm
+
 #Creates an empty affinityExperiment topic and returs its mid
 # attaches the created topic to the given interaction topic mid
 def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCredentials):
@@ -216,7 +266,6 @@ def createDissociationConstantTopic(aff_exp_mid, ServiceUrl, anHttp, someCredent
     sys.exit()
   else:
     return kd_mid
-  
 
 #Creates an empty selex experiment topic
 #creates the corresponding topics:
@@ -283,10 +332,10 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
     else:
       raise Exception("Could not create selex conditions!")
       sys.exit()
-    
     return rm
   else:
     raise Exception("Could not create Selex experiment topic!")
+    sys.exit()
     return None;
 
 def makeRequestBody(someCredentials, aQuery):
@@ -311,28 +360,36 @@ def runQuery(someParams, aServiceUrl, anHttp):
     sys.exit()
     return None
 
-def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
-
-  #create an empty selex experiment topic and get its mid
-  mid_dict = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
-  #add the reference details from this experiment
-  addReferenceDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
-  addSelexDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
-  addSelexConditions(mid_dict, cleanJson, aServiceUrl, anHttp,someCredentials)
-  addInteractions(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
-  return mid_dict
-
-
-def addInteractions(anMidDict,cleanJson, aServiceUrl, anHttp, someCredentials):
+def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCredentials):
   #iterate over the interactions
   for ai in cleanJson["interactions"]:
     #create an empty interaction topic
-    int_mid = createInteractionTopic(anMidDict["mid"], aServiceUrl, anHttp, someCredentials)
+    int_mid = createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredentials)
     #now iterate over the affinity experiments in clean json
     for ae in ai["affinity_experiments"]:
       #create an empty affinity experiment topic
       aff_mid = createAffinityExperimentTopic(int_mid, aServiceUrl, anHttp, someCredentials)
-      afe = cleanJson["intercations"]
+      #create an affinity condition topic
+      aff_cond_dict = createAffinityConditions(aff_mid, aServiceUrl, anHttp, someCredentials)
+      #add the affinity experiment details
+
+      #add the affinity method to the affinity experiment topic
+      for afn in ae["affinity_methods_names"]:
+        #affinity method
+        q = {
+          "mid": aff_mid,
+          "/base/aptamer/selex_experiment/has_selex_method":{
+            "connect":"insert",
+            "name": str(afn),
+            "type":"/base/aptamer/selex_method"
+          }
+        }
+        params = makeRequestBody(someCredentials, q)
+        r = runQuery(params, aServiceUrl, anHttp)
+        if r == None:
+          raise Exception("Could not add affinity method "+ afn)
+          sys.exit()
+
   pass
 
 # add the follwing details:
