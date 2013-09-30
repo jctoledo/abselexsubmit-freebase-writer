@@ -172,7 +172,7 @@ def createAffinityConditions(anAffinityExperimentMid, aServiceUrl, anHttp, someC
       "create":"unconditional",
       "mid":None,
       "type":"/base/aptamer/binding_solution",
-      "/base/aptamer/biding_solution/is_binding_solution_of":{
+      "/base/aptamer/binding_solution/is_binding_solution_of":{
         "connect":"insert",
         "mid": aff_cond_mid
       }
@@ -246,9 +246,24 @@ def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCre
   #     params = makeRequestBody(someCredentials, q)
   #     runQuery(params, aServiceUrl, anHttp)
 
+#Create an empty floating point range topic 
+def createFloatingPointRangeTopic(aKdMid, aServiceUrl, anHttp, someCredentials):
+  q = {
+    "create":"unconditional",
+    "mid":None,
+    "type":"/measurement_unit/floating_point_range"
+  }
+  p = makeRequestBody(someCredentials, q)
+  fpr_mid = runQuery(p, aServiceUrl, anHttp)
+  if fpr_mid == None:
+    raise Exception("Could not create floating point range!")
+    sys.exit()
+  else:
+    return fpr_mid
+
 #creates an empty dissociation constant topic and returns it 
 # atttaches it to the given affinity experiment mid
-def createDissociationConstantTopic(aff_exp_mid, ServiceUrl, anHttp, someCredentials):
+def createDissociationConstantTopic(aff_exp_mid, aServiceUrl, anHttp, someCredentials):
   q = {
     "create":"unconditional",
     "mid":None,
@@ -369,27 +384,198 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
     for ae in ai["affinity_experiments"]:
       #create an empty affinity experiment topic
       aff_mid = createAffinityExperimentTopic(int_mid, aServiceUrl, anHttp, someCredentials)
-      #create an affinity condition topic
-      aff_cond_dict = createAffinityConditions(aff_mid, aServiceUrl, anHttp, someCredentials)
-      #add the affinity experiment details
-
-      #add the affinity method to the affinity experiment topic
-      for afn in ae["affinity_methods_names"]:
-        #affinity method
-        q = {
-          "mid": aff_mid,
-          "/base/aptamer/selex_experiment/has_selex_method":{
+      #create an empty kd topic
+      kd_mid = createDissociationConstantTopic(aff_mid, aServiceUrl, anHttp, someCredentials)
+      #add the value of the dissociation constant 
+      #(add the value to temporary value as well)
+      try:
+        kd = ae["kd"]
+        q={
+          "mid":kd_mid,
+          "/base/aptamer/dissociation_constant/has_value":{
             "connect":"insert",
-            "name": str(afn),
-            "type":"/base/aptamer/selex_method"
+            "value":float(kd),
+          },
+          "/base/aptamer/dissociation_constant/has_temporary_string_value":{
+            "connect":"insert",
+            "value" :str(kd),
+            "lang":"/lang/en"
+          },
+          "/base/aptamer/dissociation_constant/is_dissociation_constant_of":{
+            "connect":"insert",
+            "mid":int_mid
           }
         }
-        params = makeRequestBody(someCredentials, q)
-        r = runQuery(params, aServiceUrl, anHttp)
+        p = makeRequestBody(someCredentials, q)
+        r = runQuery(p, aServiceUrl, anHttp)
         if r == None:
-          raise Exception("Could not add affinity method "+ afn)
+          raise Exception("Could not create kd topic!")
           sys.exit()
-
+      except KeyError:
+        pass
+      #add the range of the dissociation constant
+      try:
+        kd_range_dirty = ae["kd_range"]
+        #now split by " to "
+        kd_range = kd_range_dirty.split(" to ")
+        if len(kd_range) == 2:
+          low =  kd_range[0]
+          high = kd_range[1]
+          #create a floating_point_range topic
+          pfr_mid = createFloatingPointRangeTopic(kd_mid, aServiceUrl, anHttp, someCredentials)
+          #add the values
+          q = {
+            "mid":pfr_mid,
+            "/measurement_unit/floating_point_range/low_value":{
+              "connect":"insert",
+              "value":float(low)
+            },
+            "/measurement_unit/floating_point_range/high_value":{
+              "connect":"insert",
+              "value":float(high)
+            }
+          }
+          p = makeRequestBody(someCredentials, q)
+          r = runQuery(p, aServiceUrl, anHttp)
+          if r == None:
+            raise Exception("Could not create range topic")
+            sys.exit()
+          else:
+            #connect the floating point range back to the kd topic
+            q = {
+              "mid":kd_mid,
+              "/base/aptamer/dissociation_constant/has_value_range":{
+                "connect":"insert",
+                "mid":pfr_mid
+              },
+              "/base/aptamer/dissociation_constant/has_temporary_string_value_range":{
+                "connect":"insert",
+                "value":str(kd_range),
+                "lang":"/lang/en"
+              }
+            }
+            p = makeRequestBody(someCredentials, q)
+            r = runQuery(p, aServiceUrl, anHttp)
+            if r == None:
+              raise Exception("Could not connect kd to range value")
+              sys.exit()
+      except KeyError:
+        pass
+      #add the error of the dissociation constant
+      try:
+        error = ae["kd_error"]
+        q = {
+          "mid":kd_mid,
+          "/base/aptamer/dissociation_constant/has_error":{
+            "connect":"insert",
+            "value":float(error)
+          },
+          "/base/aptamer/dissociation_constant/temporary_error_string":{
+            "connect":"insert",
+            "value": error,
+            "lang": "/lang/en"
+          }
+        }
+        p = makeRequestBody(someCredentials, q)
+        r = runQuery(p, aServiceUrl, anHttp)
+        if r == None:
+          raise Exception("Could not add kd error")
+          sys.exit()
+      except KeyError:
+        pass
+      #create an affinity conditions topic
+      aff_cond_dict = createAffinityConditions(aff_mid, aServiceUrl, anHttp, someCredentials)
+      #add the affinity experiment details
+      #add the affinity method to the affinity experiment topic
+      try:
+        for afn in ae["affinity_methods_names"]:
+          #affinity method
+          q = {
+            "mid": aff_mid,
+            "/base/aptamer/affinity_experiment/affinity_method":{
+              "connect":"insert",
+              "name": str(afn),
+              "type":"/base/aptamer/affinity_method"
+            }
+          }
+          params = makeRequestBody(someCredentials, q)
+          r = runQuery(params, aServiceUrl, anHttp)
+          if r == None:
+            raise Exception("Could not add affinity method "+ afn)
+            sys.exit()
+      except KeyError:
+        pass
+      #now add the affinity conditions for this experiment
+      #first add the buffering agent for the binding solution of the affinity conditions
+      try:
+        for aba in ae["buffering_agent_names"]:
+          q={
+            "mid": aff_cond_dict["binding_solution"],
+            "/base/aptamer/binding_solution/has_buffering_agent":{
+              "connect":"insert",
+              "name":str(aba),
+              "type":"/base/aptamer/buffering_agent"
+            }
+          }
+          params = makeRequestBody(someCredentials, q)
+          r = runQuery(params, aServiceUrl, anHttp)
+          if r == None:
+            raise Exception ("Could not add buffering agent to binding solution")
+            sys.exit()
+      except KeyError:
+        pass    
+      #now add the metal cation concentrations to the binding solution
+      try:
+        for amcc in ae["ae_metal_cation_concs"]:
+          q={
+            "mid":aff_cond_dict["binding_solution"],
+            "/base/aptamer/binding_solution/ionic_strength":{
+              "connect":"insert",
+              "value":str(amcc),
+              "lang": "/lang/en"
+            }
+          }
+          params = makeRequestBody(someCredentials, q)
+          r = runQuery(params, aServiceUrl, anHttp)
+          if r == None:
+            raise Exception ("Could not add ionic strength to binding solution!")
+            sys.exit()
+      except KeyError:
+        pass
+      #now add the ph to the binding solution
+      try:
+        ph = ae["ph"]
+        q={
+          "mid":aff_cond_dict["binding_solution"],
+          "/base/aptamer/binding_solution/ph":{
+            "connect":"insert",
+            "value":float(ph)
+          }
+        }
+        p = makeRequestBody(someCredentials, q)
+        r = runQuery(p, aServiceUrl, anHttp)
+        if r == None:
+          raise Exception ("Could not add ph")
+          sys.exit()
+      except KeyError:
+        pass
+      #now add the temperature 
+      try:
+        temp = ae["temperature"]
+        q = {
+          "mid":aff_cond_dict["binding_solution"],
+          "/base/aptamer/binding_solution/temperature":{
+            "connect":"insert",
+            "value":float(temp)
+          }
+        }
+        p = makeRequestBody(someCredentials, q)
+        r = runQuery(p, aServiceUrl, anHttp)
+        if r == None:
+          raise Exception ("Could not add temperature")
+          sys.exit()
+      except KeyError:
+        pass
   pass
 
 # add the follwing details:
@@ -549,7 +735,7 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
         "mid": anMidDict["partitioning_method"],
         "/base/aptamer/partitioning_method/has_separation_method":{
           "connect":"insert",
-          "name": an,
+          "name": str(an),
           "type":"/base/aptamer/separation_methods"
         } 
       }
