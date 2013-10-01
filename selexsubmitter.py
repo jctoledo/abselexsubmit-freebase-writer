@@ -52,9 +52,8 @@ import sys
 import json
 import urllib
 import os.path
-import pprint
+import RNA
 
-from pprint import pprint
 from urllib import urlencode
 from apiclient import discovery
 from oauth2client import file
@@ -229,6 +228,7 @@ def createAptamerTopic(anInteractionMid, aType, aSequence, aServiceUrl, anHttp, 
     raise Exception("Not a valid aptamer type was passed in")
     sys.exit()
 
+
 #creates an aptamer target topic and connects it to a passed in interaction mid. Uses the given name aswell
 def createAptamerTargetTopic(anInteractionMid, aTargetName,aServiceUrl,anHttp,someCredentials):
   q = {
@@ -290,6 +290,39 @@ def createFloatingPointRangeTopic(aKdMid, aServiceUrl, anHttp, someCredentials):
     sys.exit()
   else:
     return fpr_mid
+#creates a predicted secondary structure topic 
+# adds the given dbn and mfe 
+# assumes program used was RNAfold
+def createPredictedSecondaryStructureTopic(apt_mid, dbn, mfe, aServiceUrl, anHttp, someCredentials):
+  q = {
+    "create":"unconditional",
+    "mid":None,
+    "type":"/base/aptamer/predicted_secondary_structure",
+    "/base/aptamer/predicted_secondary_structure/software_used":{
+      "connect":"insert",
+      "mid":"/m/0gkkmsx"
+    },
+    "/base/aptamer/predicted_secondary_structure/dot_bracket_notation":{
+      "connect":"insert",
+      "value":str(dbn),
+      "lang":"/lang/en"
+    },
+    "/base/aptamer/predicted_secondary_structure/minimum_free_energy":{
+      "connect":"insert",
+      "value":float(mfe)
+    },
+    "/base/aptamer/predicted_secondary_structure/is_predicted_secondary_structure_of":{
+      "connect":"insert",
+      "mid":apt_mid
+    }
+  }
+  p = makeRequestBody(someCredentials, q)
+  pss_mid = runQuery(p, aServiceUrl, anHttp)
+  if pss_mid == None:
+    raise Exception("Could not create predicted secondary structure topic!")
+    sys.exit()
+  else:
+    return pss_mid
 
 #creates an empty dissociation constant topic and returns it 
 # atttaches it to the given affinity experiment mid
@@ -613,6 +646,12 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
     try:
       for anApt in ai["aptamers"]:
         apt_mid = createAptamerTopic(int_mid, anApt["polymer_type"], anApt["sequence"], aServiceUrl, anHttp, someCredentials)
+        #now predict the secondary structure
+        fold = RNA.fold(str(anApt["sequence"]))
+        dbn = fold[0]
+        mfe = fold[1]
+        #create a predicted secondary structure topic
+        pred_ss_mid = createPredictedSecondaryStructureTopic(apt_mid, dbn, mfe, aServiceUrl, anHttp, someCredentials)
         #now add the mutational analysis to the aptamer topic
         try:
           ma = True
