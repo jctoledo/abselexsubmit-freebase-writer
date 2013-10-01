@@ -402,7 +402,6 @@ def runQuery(someParams, aServiceUrl, anHttp):
     print resp
     print content
     raise Exception("Could not run query!! erno:234442")
-    sys.exit()
     return None
 
 def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCredentials):
@@ -691,7 +690,10 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
         int_type = "/base/aptamer/collective_interaction"
       q={
         "mid":int_mid,
-        "w:type":int_type
+        "type":{
+          "connect":"insert",
+          "id":int_type
+        }
       }
       p = makeRequestBody(someCredentials, q)
       r = runQuery(p, aServiceUrl, anHttp)
