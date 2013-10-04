@@ -61,6 +61,9 @@ from oauth2client import file
 from oauth2client import client
 from oauth2client import tools
 
+#a dict of target names to mids
+target_dict = {}
+
 # Parser for command-line arguments.
 parser = argparse.ArgumentParser(
     description=__doc__,
@@ -1072,23 +1075,29 @@ def promptUserForTargetType(aTargetName):
   opts = "Please choose one of the following options that best describes the aptamer target : "+aTargetName+"\n"
   opts += "1 : cell\n2 : protein\n3 : small molecule\n"
   anMid = None
-  x = 0
-  while not x:
-    try:
-      choice = int(raw_input(opts))
-      if choice == 1:
-        x =1 
-        return "/m/01cbd"
-      elif choice == 2:
-        x =1 
-        return "/m/05wvs"
-      elif choice == 3:
-        x= 1
-        return "/m/043tvww"
-      else:
-        print "invalid option... try again"   
-    except ValueError, e:
-      print ("'%s' is not a valid integer." % e.args[0].split(": ")[1])
+  if not aTargetName in target_dict:
+    x = 0
+    while not x:
+      try:
+        choice = int(raw_input(opts))
+        if choice == 1:
+          x =1
+          target_dict[aTargetName] = "/m/01cbd"
+          return "/m/01cbd"
+        elif choice == 2:
+          x =1 
+          target_dict[aTargetName] = "/m/05wvs"
+          return "/m/05wvs"
+        elif choice == 3:
+          x= 1
+          target_dict[aTargetName] = "/m/043tvww"
+          return "/m/043tvww"
+        else:
+          print "invalid option... try again"   
+      except ValueError, e:
+        print ("'%s' is not a valid integer." % e.args[0].split(": ")[1])
+  else:
+    return target_dict[aTargetName]
 
 
 #This function calls the java servlet that parses the output of selexsubmit form
