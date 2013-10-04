@@ -116,8 +116,7 @@ def main(argv):
       cleanJson = getCleanJson(servlet_url, inputFilesPath ,fn)
       #now prepare a write query for the cleanJSON
       se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
-      print se_mid
-      sys.exit()
+      print "created selex experiment topic with mid: "+se_mid["mid"]
 
 def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   #create an empty selex experiment topic and get its mid
@@ -298,6 +297,7 @@ def createFloatingPointRangeTopic(aKdMid, aServiceUrl, anHttp, someCredentials):
     sys.exit()
   else:
     return fpr_mid
+
 #creates a predicted secondary structure topic 
 # adds the given dbn and mfe 
 # assumes program used was RNAfold
@@ -915,6 +915,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
         sys.exit()
   except KeyError:
     pass
+
 #add the following details:
 # partitioning method
 # recovery method
@@ -1098,7 +1099,6 @@ def promptUserForTargetType(aTargetName):
         print ("'%s' is not a valid integer." % e.args[0].split(": ")[1])
   else:
     return target_dict[aTargetName]
-
 
 #This function calls the java servlet that parses the output of selexsubmit form
 def getCleanJson(aServletUrl, aDirPath,aFileName):
