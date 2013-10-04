@@ -52,6 +52,7 @@ import sys
 import json
 import urllib
 import os.path
+import re
 import RNA
 
 from urllib import urlencode
@@ -768,6 +769,8 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
   #add the template sequence
   try:
     ts = cleanJson["se"]["selex_conditions"]["template_sequence"]
+    var_region_summation = computeVariableRegionSummation(ts)
+
     q = {
       "mid" : anMidDict["selex_conditions"],
       "/base/aptamer/selex_conditions/has_template_sequence":{
@@ -779,6 +782,9 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
     if runQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! 99843234")
       sys.exit()
+  #add the variable region summation 
+  #/(^([ACGTRUYKMSWBDHVNX-]+\s*-\s*\d+\s*-\s*[ACGTRUYKMSWBDHVNX-]+)$)|(^([ACGTRUYKMSWBDHVNX-]+\s*-\s*\d+\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*-\s*\d+\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*)$)|(^NO\-TEMPLATE$)|(^\-\d+\-$)/
+
   except KeyError:
     pass
   #add the template bias
@@ -927,6 +933,16 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
         sys.exit()
   except KeyError:
     pass
+
+def computeVariableRegionSummation(aTemplateSequence):
+   #compute the variable region summation 
+    pat1 = '^[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+$'
+    pat2 = '^[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*$'
+    pat3 = '^NO\-TEMPLATE$'
+    m1 = re.match(pat1, aTemplateSequence)
+    m2 = re.match(pat2, aTemplateSequence)
+    m3 = re.match(pat3, aTemplateSequence)
+    
 
 #add the reference details to the anMid's selex experiment topic
 # details to be added here are:
