@@ -231,7 +231,7 @@ def createAptamerTopic(anInteractionMid, aType, aSequence, aServiceUrl, anHttp, 
 
 
 #creates an aptamer target topic and connects it to a passed in interaction mid. Uses the given name aswell
-def createAptamerTargetTopic(anInteractionMid, aTargetName,aServiceUrl,anHttp,someCredentials):
+def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServiceUrl,anHttp,someCredentials):
   q = {
     "create":"unconditional",
     "mid":None,
@@ -246,6 +246,10 @@ def createAptamerTargetTopic(anInteractionMid, aTargetName,aServiceUrl,anHttp,so
       "connect":"insert",
       "value" : str(aTargetName),
       "lang":"/lang/en"
+    },
+    "/base/aptamer/aptamer_target/has_type":{
+      "connect":"insert",
+      "mid":aTargetTypeMid
     }
   }
   p = makeRequestBody(someCredentials, q)
@@ -652,8 +656,10 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
         pass
     #now find  the aptamer target name from the input
     aptamer_target_name = ai["aptamer_target"]["name"]
+    #ask the user to identify the type of the target
+    target_type_mid = promptUserForTargetType(aptamer_target_name)
     #create an aptamer target topic and add the passed in name
-    att_mid = createAptamerTargetTopic(int_mid, aptamer_target_name, aServiceUrl, anHttp, someCredentials)
+    att_mid = createAptamerTargetTopic(int_mid, aptamer_target_name, target_type_mid, aServiceUrl, anHttp, someCredentials)
     #now add the aptamers to the interaction
     try:
       for anApt in ai["aptamers"]:
@@ -1057,6 +1063,33 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
       sys.exit()
   except KeyError:
     pass
+
+#this method prompts the user to select the correct target type
+# for the passed in target name. The options are: 1. cell, 2. small molecule 3. protein
+# ask the user until they answer correctly
+# returns the Mid of the type the user picked
+def promptUserForTargetType(aTargetName):
+  opts = "Please choose one of the following options that best describes the aptamer target : "+aTargetName+"\n"
+  opts += "1 : cell\n2 : protein\n3 : small molecule\n"
+  anMid = None
+  x = 0
+  while not x:
+    try:
+      choice = int(raw_input(opts))
+      if choice == 1:
+        x =1 
+        return "/m/01cbd"
+      elif choice == 2:
+        x =1 
+        return "/m/05wvs"
+      elif choice == 3:
+        x= 1
+        return "/m/043tvww"
+      else:
+        print "invalid option... try again"   
+    except ValueError, e:
+      print ("'%s' is not a valid integer." % e.args[0].split(": ")[1])
+
 
 #This function calls the java servlet that parses the output of selexsubmit form
 def getCleanJson(aServletUrl, aDirPath,aFileName):
