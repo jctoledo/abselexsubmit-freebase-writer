@@ -116,12 +116,13 @@ def main(argv):
     if fn:
       start = time.time()
       cleanJson = getCleanJson(servlet_url, inputFilesPath ,fn)
-      #now prepare a write query for the cleanJSON
-      se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
-      print "created selex experiment topic with mid: "+se_mid["mid"]
-      end = time.time()
-      tt = end-start
-      print "time elapsed in seconds: "+str(tt)
+      if cleanJson:
+        #now prepare a write query for the cleanJSON
+        se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
+        print "created selex experiment topic with mid: "+se_mid["mid"]
+        end = time.time()
+        tt = end-start
+        print "time elapsed in seconds: "+str(tt)
 
 def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   #create an empty selex experiment topic and get its mid
@@ -719,7 +720,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
         try:
           q = {
             "mid":apt_mid,
-            "/base/aptamer/application":{
+            "/base/aptamer/aptamer/application":{
               "connect":"insert",
               "value":str(anApt["application"]),
               "lang":"/lang/en"
@@ -1002,6 +1003,7 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
       raise Exception("Could not add default recovery method!")
       sys.exit()
 
+#deal - # -
 def computeVariableRegionSummation(aTemplateSequence):
    #compute the variable region summation 
     pat1 = '^NO\-TEMPLATE$'
@@ -1123,12 +1125,17 @@ def getCleanJson(aServletUrl, aDirPath,aFileName):
         f = urllib.urlopen(aServletUrl, urlencode(params))
         output = f.read().replace("\\\"", "")
         if output:
-          json_raw.close()
-          rm = json.loads(output)
-          return rm
+          try:
+            json_raw.close()
+            rm = json.loads(output)
+            return rm
+          except ValueError:
+            print "Could not get data from servlet for this file: "+aFileName
+            return None
         else:
+          print "skipping file :"+aFileName
           json_raw.close()
-          raise Exception("Servlet found here: "+aServletUrl+" did not respond!")
+          #raise Exception("Servlet found here: "+aServletUrl+" did not respond!")
           return None
     else:
       continue
