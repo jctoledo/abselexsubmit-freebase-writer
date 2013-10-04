@@ -995,7 +995,6 @@ def computeVariableRegionSummation(aTemplateSequence):
     m1 = re.match(pat1, aTemplateSequence)
     m2 = re.match(pat2, aTemplateSequence)
     m3 = re.match(pat3, aTemplateSequence)
-    print "template sequence", aTemplateSequence
     if m1:
       return -1
     elif m2:
