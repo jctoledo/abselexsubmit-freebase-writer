@@ -54,6 +54,7 @@ import urllib
 import os.path
 import re
 import RNA
+import time
 
 from urllib import urlencode
 from apiclient import discovery
@@ -113,10 +114,14 @@ def main(argv):
   service = discovery.build('freebase', 'v1', http=http)
   for fn in os.listdir(inputFilesPath):
     if fn:
+      start = time.time()
       cleanJson = getCleanJson(servlet_url, inputFilesPath ,fn)
       #now prepare a write query for the cleanJSON
       se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
       print "created selex experiment topic with mid: "+se_mid["mid"]
+      end = time.time()
+      tt = end-start
+      print "time elapsed in seconds: "+str(tt)
 
 def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   #create an empty selex experiment topic and get its mid
