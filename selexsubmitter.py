@@ -586,7 +586,18 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             raise Exception ("Could not add buffering agent to binding solution")
             sys.exit()
       except KeyError:
-        pass    
+        q = {
+          "mid": aff_cond_dict["binding_solution"],
+          "/base/aptamer/binding_solution/has_buffering_agent":{
+            "connect":"insert",
+            "mid":"/m/0g5m7lm"
+          }
+        }
+        p = makeRequestBody(someCredentials, q)
+        r = runQuery(p, aServiceUrl, anHttp)
+        if r == None:
+          raise Exception("Could not add buffering agent to binding solution! errono 99")
+          sys.exit()   
       #now add the metal cation concentrations to the binding solution
       try:
         for amcc in ae["ae_metal_cation_concs"]:
@@ -770,21 +781,31 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
   try:
     ts = cleanJson["se"]["selex_conditions"]["template_sequence"]
     var_region_summation = computeVariableRegionSummation(ts)
-
-    q = {
-      "mid" : anMidDict["selex_conditions"],
-      "/base/aptamer/selex_conditions/has_template_sequence":{
-        "connect":"insert",
-        "value":str(ts)
+    if var_region_summation > 1:
+      q ={
+        "mid" : anMidDict["selex_conditions"],
+        "/base/aptamer/selex_conditions/has_template_sequence":{
+          "connect":"insert",
+          "value":str(ts),
+        },
+        "/base/aptamer/selex_conditions/template_variable_region_summation":{
+          "connect": "insert",
+          "value": int(var_region_summation)
+        }
       }
-    }
+    else:
+      q = {
+        "mid" : anMidDict["selex_conditions"],
+        "/base/aptamer/selex_conditions/has_template_sequence":{
+          "connect":"insert",
+          "value":str(ts)
+        }
+      }
     params = makeRequestBody(someCredentials, q)
     if runQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! 99843234")
       sys.exit()
-  #add the variable region summation 
-  #/(^([ACGTRUYKMSWBDHVNX-]+\s*-\s*\d+\s*-\s*[ACGTRUYKMSWBDHVNX-]+)$)|(^([ACGTRUYKMSWBDHVNX-]+\s*-\s*\d+\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*-\s*\d+\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*)$)|(^NO\-TEMPLATE$)|(^\-\d+\-$)/
-
+  
   except KeyError:
     pass
   #add the template bias
@@ -855,7 +876,18 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
         raise Exception ("Could not run query! 98327492387423")
         sys.exit()
   except KeyError:
-    pass
+    q = {
+    "mid": anMidDict["selection_solution"],
+    "/base/aptamer/binding_solution/has_buffering_agent":{
+      "connect":"insert",
+      "mid":"/m/0g5m7lm"
+      }
+    }
+    p = makeRequestBody(someCredentials, q)
+    r = runQuery(p, aServiceUrl, anHttp)
+    if r == None:
+      raise Exception("Could not add buffering agent to binding solution! errono 99")
+      sys.exit()
   #add the selection solution's metal cation conc string
   try:
     mcc = cleanJson["se"]["selex_conditions"]["metal_cation_concentration"]
@@ -914,6 +946,17 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
         raise Exception("Could not run query! 113")
         sys.exit()
   except KeyError:
+    q = {
+      "mid": anMidDict["partitioning_method"],
+      "/base/aptamer/partitioning_method/has_separation_method":{
+        "connect":"insert",
+        "mid": "/m/0g5m7lm"
+      }
+    }
+    p = makeRequestBody(someCredentials, q)
+    if runQuery(p, aServiceUrl, anHttp) == None:
+      raise Exception ("Could not add default partitioning_method")
+      sys.exit()
     pass
   #now add the recovery methods
   try:
@@ -932,17 +975,36 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
         raise Exception("Could not run query! 324")
         sys.exit()
   except KeyError:
-    pass
+    q ={
+      "mid":anMidDict["recovery_method"],
+      "/base/aptamer/recovery_method_se/has_recovery_method":{
+        "connect":"insert",
+        "mid":"/m/0g5m7lm"
+      }
+    }
+    p = makeRequestBody(someCredentials, q)
+    if runQuery(p, aServiceUrl, anHttp) == None:
+      raise Exception("Could not add default recovery method!")
+      sys.exit()
 
 def computeVariableRegionSummation(aTemplateSequence):
    #compute the variable region summation 
-    pat1 = '^[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+$'
-    pat2 = '^[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*$'
-    pat3 = '^NO\-TEMPLATE$'
+    pat1 = '^NO\-TEMPLATE$'
+    pat2 = '^[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+$'
+    pat3 = '^[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*-\s*(\d+)\s*-\s*[ACGTRUYKMSWBDHVNX-]+\s*$'
     m1 = re.match(pat1, aTemplateSequence)
     m2 = re.match(pat2, aTemplateSequence)
     m3 = re.match(pat3, aTemplateSequence)
-    
+    print "template sequence", aTemplateSequence
+    if m1:
+      return -1
+    elif m2:
+      return float(m2.group(1))
+    elif m3:
+      r = float(m3.group(1)) + float(m3.group(2))
+      return r
+    else:
+      return -1
 
 #add the reference details to the anMid's selex experiment topic
 # details to be added here are:
