@@ -243,7 +243,7 @@ def createAptamerTopic(anInteractionMid, aType, aSequence, aServiceUrl, anHttp, 
 #creates an aptamer target topic and connects it to a passed in interaction mid. Uses the given name aswell
 def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServiceUrl,anHttp,someCredentials):
   q = {
-    "create":"unless_exists",
+    "create":"unconditional",
     "mid":None,
     "type":"/base/aptamer/interactor",
     "b:type":"/base/aptamer/aptamer_target",
