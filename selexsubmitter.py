@@ -112,18 +112,19 @@ def main(argv):
   http = credentials.authorize(http)
   # Construct the service object for the interacting with the Freebase API.
   service = discovery.build('freebase', 'v1', http=http)
-  
+
   if inputFile:
-    print inputFile
-    #start = time.time()
-    # cleanJson = getCleanJson(servlet_url, inputFilesPath ,fn)
-    # if cleanJson:
-    #   #now prepare a write query for the cleanJSON
-    #   se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
-    #   print "created selex experiment topic with mid: "+se_mid["mid"]
-    #   end = time.time()
-    #   tt = end-start
-    #   print "time elapsed in seconds: "+str(tt)
+    ifp =  os.path.dirname(inputFile)
+    ifn = os.path.basename(inputFile)
+    start = time.time()
+    cleanJson = getCleanJson(servlet_url, ifp ,ifn)
+    if cleanJson:
+      #now prepare a write query for the cleanJSON
+      se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
+      print "created selex experiment topic with mid: "+se_mid["mid"]
+      end = time.time()
+      tt = end-start
+      print "time elapsed in seconds: "+str(tt)
 
 def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   #create an empty selex experiment topic and get its mid
