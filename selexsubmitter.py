@@ -71,7 +71,7 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     parents=[tools.argparser])
 parser.add_argument('-su', '--servlet_url', help='the URL of the servlet that parses the JSON files', required=True)
-parser.add_argument('-dir', '--input_directory', help='the local directory that has the input JSON files', required=True)
+parser.add_argument('-if', '--input_file', help='an input JSON file', required=True)
 
 # CLIENT_SECRETS is name of a file containing the OAuth 2.0 information for this
 # application, including client_id and client_secret. You can see the Client ID
@@ -95,7 +95,7 @@ def main(argv):
   flags = parser.parse_args(argv[1:])
   #define some vars 
   service_url_write = 'https://www.googleapis.com/freebase/v1sandbox/mqlwrite'
-  inputFilesPath = flags.input_directory
+  inputFile = flags.input_file
   servlet_url = flags.servlet_url
 
   # If the credentials don't exist or are invalid run through the native client
@@ -112,17 +112,18 @@ def main(argv):
   http = credentials.authorize(http)
   # Construct the service object for the interacting with the Freebase API.
   service = discovery.build('freebase', 'v1', http=http)
-  for fn in os.listdir(inputFilesPath):
-    if fn:
-      start = time.time()
-      cleanJson = getCleanJson(servlet_url, inputFilesPath ,fn)
-      if cleanJson:
-        #now prepare a write query for the cleanJSON
-        se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
-        print "created selex experiment topic with mid: "+se_mid["mid"]
-        end = time.time()
-        tt = end-start
-        print "time elapsed in seconds: "+str(tt)
+  
+  if inputFile:
+    print inputFile
+    #start = time.time()
+    # cleanJson = getCleanJson(servlet_url, inputFilesPath ,fn)
+    # if cleanJson:
+    #   #now prepare a write query for the cleanJSON
+    #   se_mid = writeToFreebase(cleanJson, service_url_write, http, credentials)
+    #   print "created selex experiment topic with mid: "+se_mid["mid"]
+    #   end = time.time()
+    #   tt = end-start
+    #   print "time elapsed in seconds: "+str(tt)
 
 def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
   #create an empty selex experiment topic and get its mid
