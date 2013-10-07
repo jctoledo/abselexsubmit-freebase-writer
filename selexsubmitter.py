@@ -46,6 +46,7 @@ by running:
 """
 
 import argparse
+import pygame
 import httplib2
 import os
 import sys
@@ -496,7 +497,7 @@ def runQuery(someParams, aServiceUrl, anHttp, firstOnly=False):
     if not firstOnly:
      return r["result"]["mid"]
     else:
-      if len(r["result"]) == 0:
+      if len(r["result"]) == 3:
         return r["result"]["mid"]
       else:
         return r["result"][0]["mid"]
@@ -1109,7 +1110,8 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    r = runQuery(params, aServiceUrl, anHttp)
+    if r == None:
       raise Exception("Could not run query! oi42h")
       sys.exit()
   except KeyError:
@@ -1140,6 +1142,7 @@ def promptUserForTargetType(aTargetName):
   opts += "1 : cell\n2 : protein\n3 : small molecule\n"
   anMid = None
   if not aTargetName in target_dict:
+    playsound()
     x = 0
     while not x:
       try:
@@ -1195,6 +1198,15 @@ def getCleanJson(aServletUrl, aDirPath,aFileName):
           return None
     else:
       continue
+
+def playsound():
+  fn = os.getcwd()+'/b.mp3'
+  pygame.init()
+  pygame.mixer.init()
+  pygame.mixer.music.load(fn)
+  pygame.mixer.music.play()
+  while pygame.mixer.music.get_busy(): 
+    pygame.time.Clock().tick(10)
 
 if __name__ == '__main__':
   main(sys.argv)
