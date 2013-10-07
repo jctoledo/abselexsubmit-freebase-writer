@@ -1106,7 +1106,8 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
       "mid":anMidDict["mid"],
       "/base/aptamer/experiment/digital_object_identifier":{
         "connect":"insert",
-        "value":str(doi)
+        "value":str(doi),
+        "lang":"/lang/en"
       }
     }
     params = makeRequestBody(someCredentials, q)
