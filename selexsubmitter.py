@@ -242,6 +242,7 @@ def createAptamerTopic(anInteractionMid, aType, aSequence, aServiceUrl, anHttp, 
 
 #creates an aptamer target topic and connects it to a passed in interaction mid. Uses the given name aswell
 def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServiceUrl,anHttp,someCredentials):
+  #first check if there exists a chemical compound with the given name
   q = {
     "create":"unconditional",
     "mid":None,
@@ -270,6 +271,18 @@ def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServi
   else:
     return r
 
+#This function returns the first mid of the chemical compound (/chemistry/chemical_compound) topic
+#that has as name aName. If none is found None is returned
+def checkFreebaseForChemicalCompound(aName, aServiceUrl,anHttp,someCredentials):
+  if aName:
+    q = {
+      "mid":None,
+      "name": str(aName),
+      "type":"/chemistry/chemical_compound"
+    }
+    p = makeRequestBody(someCredentials, q)
+    r = runQuery(p, aServiceUrl, anHttp, firstOnly=True)
+  return None
 #Creates an empty affinityExperiment topic and returs its mid
 # attaches the created topic to the given interaction topic mid
 def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCredentials):
@@ -439,13 +452,16 @@ def makeRequestBody(someCredentials, aQuery):
   }
   return p
 
-def runQuery(someParams, aServiceUrl, anHttp):
+def runQuery(someParams, aServiceUrl, anHttp, firstOnly=False):
   url = aServiceUrl+'?'+urllib.urlencode(someParams)
   resp, content = anHttp.request(url)
   if resp["status"] == '200':
     #everything worked
     r = json.loads(content)
-    return r["result"]["mid"]
+    if not firstOnly:
+     return r["result"]["mid"]
+    else:
+      return r["result"][0]["mid"]
   else:
     print someParams
     print resp
