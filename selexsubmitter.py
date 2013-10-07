@@ -75,6 +75,7 @@ parser = argparse.ArgumentParser(
     parents=[tools.argparser])
 parser.add_argument('-su', '--servlet_url', help='the URL of the servlet that parses the JSON files', required=True)
 parser.add_argument('-if', '--input_file', help='an input JSON file', required=True)
+parser.add_argument('-FW', '--write_to_freebase', help='write the topic to freebase.com not the SANDBOX', action='store_true')
 
 # CLIENT_SECRETS is name of a file containing the OAuth 2.0 information for this
 # application, including client_id and client_secret. You can see the Client ID
@@ -100,6 +101,10 @@ def main(argv):
   service_url_write = 'https://www.googleapis.com/freebase/v1sandbox/mqlwrite'
   inputFile = flags.input_file
   servlet_url = flags.servlet_url
+  fw = flags.write_to_freebase
+
+  if fw :
+    service_url_write = 'https://www.googleapis.com/freebase/v1/mqlwrite'
 
   # If the credentials don't exist or are invalid run through the native client
   # flow. The Storage object will ensure that if successful the good
