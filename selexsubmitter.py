@@ -65,6 +65,8 @@ from oauth2client import tools
 
 #a dict of target names to mids
 target_dict = {}
+#a reference dictionary doi, pmid, ref 
+reference_dict = {}
 
 # Parser for command-line arguments.
 parser = argparse.ArgumentParser(
@@ -1086,6 +1088,7 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
   #first try the pmid
   try:
     pmid = cleanJson["se"]["pmid"]
+    reference_dict["pmid"] = pmid
     q = {
       "mid":anMidDict["mid"],
       "/base/aptamer/experiment/pubmed_id":{
@@ -1102,6 +1105,7 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
   #now try the doi
   try:
     doi = cleanJson["se"]["doi"]
+    reference_dict["doi"] = doi
     q = {
       "mid":anMidDict["mid"],
       "/base/aptamer/experiment/digital_object_identifier":{
@@ -1120,6 +1124,7 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
   #now try the reference
   try:
     reference = cleanJson["se"]["reference"]
+    reference_dict["reference"] = reference
     q = {
       "mid":anMidDict["mid"],
       "/base/aptamer/experiment/has_bibliographic_reference":{
