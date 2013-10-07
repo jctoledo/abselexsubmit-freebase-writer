@@ -496,7 +496,10 @@ def runQuery(someParams, aServiceUrl, anHttp, firstOnly=False):
     if not firstOnly:
      return r["result"]["mid"]
     else:
-      return r["result"][0]["mid"]
+      if len(r["result"]) == 0:
+        return r["result"]["mid"]
+      else:
+        return r["result"][0]["mid"]
   else:
     print someParams
     print resp
