@@ -519,6 +519,8 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
     for ae in ai["affinity_experiments"]:
       #create an empty affinity experiment topic
       aff_mid = createAffinityExperimentTopic(int_mid, aServiceUrl, anHttp, someCredentials)
+      #add the reference details to the affinityExperimentTopic
+      addAffinityExperimentReferenceDetails(aff_mid, aServiceUrl, anHttp, someCredentials)
       #create an empty kd topic
       kd_mid = createDissociationConstantTopic(aff_mid, aServiceUrl, anHttp, someCredentials)
       #add the value of the dissociation constant 
@@ -1080,7 +1082,60 @@ def computeVariableRegionSummation(aTemplateSequence):
       return r
     else:
       return -1
-
+#add the referente details to the anAffinityExperimentMid topic
+# uses the same details as the selex expeirment
+def addAffinityExperimentReferenceDetails(anAffinityExperimentMid, aServiceUrl, anHttp, someCredentials):
+  #pmid
+  try:
+    pmid = reference_dict["pmid"]
+    q = {
+      "mid":anAffinityExperimentMid,
+      "/base/aptamer/experiment/pubmed_id":{
+        "connect":"insert",
+        "value":str(pmid)
+      }
+    }
+    p = makeRequestBody(someCredentials, q)
+    r = runQuery(p, aServiceUrl, anHttp)
+    if r == None:
+      raise Exception("Could not add pmid@")
+      sys.exit()
+  except KeyError:
+    pass
+  #doi
+  try:
+    doi = reference_dict["doi"]
+    q = {
+      "mid":anAffinityExperimentMid,
+      "/base/aptamer/experiment/digital_object_identifier":{
+        "connect":"insert",
+        "value":str(doi),
+        "lang":"/lang/en"
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    r = runQuery(params, aServiceUrl, anHttp)
+    if r == None:
+      raise Exception("Could not run query! oi23442h")
+      sys.exit()
+  except KeyError:
+    pass
+  #reference
+  try:
+    reference = reference_dict["reference"]
+    q = {
+      "mid":anAffinityExperimentMid,
+      "/base/aptamer/experiment/has_bibliographic_reference":{
+        "connect":"insert",
+        "value":str(reference)
+      }
+    }
+    params = makeRequestBody(someCredentials, q)
+    if runQuery(params, aServiceUrl, anHttp) == None:
+      raise Exception("Could not run query! #dslk33fj")
+      sys.exit()
+  except KeyError:
+    pass
 #add the reference details to the anMid's selex experiment topic
 # details to be added here are:
 #   pmid, doi or reference string
