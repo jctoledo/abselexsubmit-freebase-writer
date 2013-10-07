@@ -243,33 +243,63 @@ def createAptamerTopic(anInteractionMid, aType, aSequence, aServiceUrl, anHttp, 
 #creates an aptamer target topic and connects it to a passed in interaction mid. Uses the given name aswell
 def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServiceUrl,anHttp,someCredentials):
   #first check if there exists a chemical compound with the given name
-  q = {
-    "create":"unconditional",
-    "mid":None,
-    "type":"/base/aptamer/interactor",
-    "b:type":"/base/aptamer/aptamer_target",
-    "c:type" :"/chemistry/chemical_compound",
-    "/base/aptamer/interactor/is_participant_in":{
-      "connect":"insert",
-      "mid":anInteractionMid
-    },
-    "name":{
-      "connect":"insert",
-      "value" : str(aTargetName),
-      "lang":"/lang/en"
-    },
-    "/base/aptamer/aptamer_target/has_type":{
-      "connect":"insert",
-      "mid":aTargetTypeMid
+  cc_mid = checkFreebaseForChemicalCompound(aTargetName, aServiceUrl, anHttp, someCredentials)
+  if cc_mid == None:
+    q = {
+      "create":"unconditional",
+      "mid":None,
+      "type":"/base/aptamer/interactor",
+      "b:type":"/base/aptamer/aptamer_target",
+      "c:type" :"/chemistry/chemical_compound",
+      "/base/aptamer/interactor/is_participant_in":{
+        "connect":"insert",
+        "mid":anInteractionMid
+      },
+      "name":{
+        "connect":"insert",
+        "value" : str(aTargetName),
+        "lang":"/lang/en"
+      },
+      "/base/aptamer/aptamer_target/has_type":{
+        "connect":"insert",
+        "mid":aTargetTypeMid
+      }
     }
-  }
-  p = makeRequestBody(someCredentials, q)
-  r = runQuery(p, aServiceUrl, anHttp)
-  if r == None:
-    raise Exception("Could not create aptamer target topic")
-    sys.exit()
+    p = makeRequestBody(someCredentials, q)
+    r = runQuery(p, aServiceUrl, anHttp)
+    if r == None:
+      raise Exception("Could not create aptamer target topic")
+      sys.exit()
+    else:
+      return r
   else:
-    return r
+    q = {
+      "mid" : cc_mid,
+      "type":{
+        "connect":"insert",
+        "id" : "/base/aptamer/interactor"
+      },
+      "b:type":{
+        "connect":"insert",
+        "id":"/base/aptamer/aptamer_target"
+      },
+      "/base/aptamer/aptamer_target/has_type":{
+        "connect":"insert",
+        "mid":aTargetTypeMid
+      },
+      "/base/aptamer/interactor/is_participant_in":{
+        "connect":"insert",
+        "mid":anInteractionMid
+      }
+    }
+    p = makeRequestBody(someCredentials, q)
+    r = runQuery(p, aServiceUrl, anHttp)
+    if r == None:
+      raise Exception("Could not create aptamer target topic 2")
+      sys.exit()
+    else:
+      return r
+
 
 #This function returns the first mid of the chemical compound (/chemistry/chemical_compound) topic
 #that has as name aName. If none is found None is returned
@@ -281,7 +311,12 @@ def checkFreebaseForChemicalCompound(aName, aServiceUrl,anHttp,someCredentials):
       "type":"/chemistry/chemical_compound"
     }
     p = makeRequestBody(someCredentials, q)
-    r = runQuery(p, aServiceUrl, anHttp, firstOnly=True)
+    r = runQuery(p, aServiceUrl, anHttp, True)
+    if r == None :
+      raise Exception("Could not search for a chemical compound!")
+      sys.exit()
+    else:
+      return r
   return None
 #Creates an empty affinityExperiment topic and returs its mid
 # attaches the created topic to the given interaction topic mid
