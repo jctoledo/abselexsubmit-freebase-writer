@@ -134,14 +134,14 @@ def main(argv):
       tt = end-start
       print "time elapsed in seconds: "+str(tt)
 
-def writeToFreebase(cleanJson, aServiceUrl, anHttp, someCredentials):
+def writeToFreebase(cleanJson, writeServiceUrl, anHttp, someCredentials):
   #create an empty selex experiment topic and get its mid
-  mid_dict = createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials)
+  mid_dict = createSelexExperimentTopic(writeServiceUrl, anHttp, someCredentials)
   #add the reference details from this experiment
-  addReferenceDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
-  addSelexDetails(mid_dict, cleanJson, aServiceUrl, anHttp, someCredentials)
-  addSelexConditions(mid_dict, cleanJson, aServiceUrl, anHttp,someCredentials)
-  addInteractions(mid_dict["mid"], cleanJson, aServiceUrl, anHttp, someCredentials)
+  addReferenceDetails(mid_dict, cleanJson, writeServiceUrl, anHttp, someCredentials)
+  addSelexDetails(mid_dict, cleanJson, writeServiceUrl, anHttp, someCredentials)
+  addSelexConditions(mid_dict, cleanJson, writeServiceUrl, anHttp,someCredentials)
+  addInteractions(mid_dict["mid"], cleanJson, writeServiceUrl, anHttp, someCredentials)
   return mid_dict
 
 #Creates a empty interaction topic including and returns the mid
@@ -158,7 +158,7 @@ def createInteractionTopic(aSelexExperimentMid, aServiceUrl, anHttp, someCredent
     }
   }
   params = makeRequestBody(someCredentials, q)
-  r = runQuery(params, aServiceUrl, anHttp)
+  r = runWriteQuery(params, aServiceUrl, anHttp)
   if r == None:
     raise Exception ("Could not create interaction topic!")
     sys.exit()
@@ -179,7 +179,7 @@ def createAffinityConditions(anAffinityExperimentMid, aServiceUrl, anHttp, someC
     }
   }
   params = makeRequestBody(someCredentials, q)
-  aff_cond_mid = runQuery(params, aServiceUrl, anHttp)
+  aff_cond_mid = runWriteQuery(params, aServiceUrl, anHttp)
   if aff_cond_mid == None:
     raise Exception("could not create affinity conditions!")
     sys.exit()
@@ -196,7 +196,7 @@ def createAffinityConditions(anAffinityExperimentMid, aServiceUrl, anHttp, someC
       }
     }
     params = makeRequestBody(someCredentials, q)
-    bs_mid = runQuery(params, aServiceUrl, anHttp)
+    bs_mid = runWriteQuery(params, aServiceUrl, anHttp)
     rm["binding_solution"] = bs_mid
     if bs_mid == None:
       raise Exception("Could not create bidning solution topic!")
@@ -237,7 +237,7 @@ def createAptamerTopic(anInteractionMid, aType, aSequence, aServiceUrl, anHttp, 
       }
     }
     p = makeRequestBody(someCredentials, q)
-    r = runQuery(p, aServiceUrl, anHttp)
+    r = runWriteQuery(p, aServiceUrl, anHttp)
     if r == None:
       raise Exception("Could not create aptamer topic")
       sys.exit()
@@ -251,7 +251,7 @@ def createAptamerTopic(anInteractionMid, aType, aSequence, aServiceUrl, anHttp, 
 #creates an aptamer target topic and connects it to a passed in interaction mid. Uses the given name aswell
 def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServiceUrl,anHttp,someCredentials):
   #first check if there exists a chemical compound with the given name
-  cc_mid = checkFreebaseForChemicalCompound(aTargetName, aServiceUrl, anHttp, someCredentials)
+  cc_mid = checkFreebaseForChemicalCompound(aTargetName, anHttp)
   if cc_mid == None:
     q = {
       "create":"unconditional",
@@ -274,7 +274,7 @@ def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServi
       }
     }
     p = makeRequestBody(someCredentials, q)
-    r = runQuery(p, aServiceUrl, anHttp)
+    r = runWriteQuery(p, aServiceUrl, anHttp)
     if r == None:
       raise Exception("Could not create aptamer target topic")
       sys.exit()
@@ -301,7 +301,7 @@ def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServi
       }
     }
     p = makeRequestBody(someCredentials, q)
-    r = runQuery(p, aServiceUrl, anHttp)
+    r = runWriteQuery(p, aServiceUrl, anHttp)
     if r == None:
       raise Exception("Could not create aptamer target topic 2")
       sys.exit()
@@ -311,20 +311,22 @@ def createAptamerTargetTopic(anInteractionMid, aTargetName,aTargetTypeMid,aServi
 
 #This function returns the first mid of the chemical compound (/chemistry/chemical_compound) topic
 #that has as name aName. If none is found None is returned
-def checkFreebaseForChemicalCompound(aName, aServiceUrl,anHttp,someCredentials):
+def checkFreebaseForChemicalCompound(aName, anHttp):
   if aName:
-    q = {
+    q = [{
       "mid":None,
       "name": str(aName),
       "type":"/chemistry/chemical_compound"
-    }
-    p = makeRequestBody(someCredentials, q)
-    r = runQuery(p, aServiceUrl, anHttp, True)
+    }]
+    r = runReadQuery(q, anHttp)
     if r == None :
       raise Exception("Could not search for a chemical compound!")
       sys.exit()
     else:
-      return r
+      if len(r) == 0:
+        return None
+      else:
+        return r[0]["mid"]
   return None
 #Creates an empty affinityExperiment topic and returs its mid
 # attaches the created topic to the given interaction topic mid
@@ -340,7 +342,7 @@ def createAffinityExperimentTopic(anInteractionMid, aServiceUrl, anHttp, someCre
     }
   }
   params = makeRequestBody(someCredentials, q)
-  afe_mid = runQuery(params, aServiceUrl, anHttp)
+  afe_mid = runWriteQuery(params, aServiceUrl, anHttp)
   if afe_mid == None:
     raise Exception("Could not create affinity experiment!")
     sys.exit()
@@ -355,7 +357,7 @@ def createFloatingPointRangeTopic(aKdMid, aServiceUrl, anHttp, someCredentials):
     "type":"/measurement_unit/floating_point_range"
   }
   p = makeRequestBody(someCredentials, q)
-  fpr_mid = runQuery(p, aServiceUrl, anHttp)
+  fpr_mid = runWriteQuery(p, aServiceUrl, anHttp)
   if fpr_mid == None:
     raise Exception("Could not create floating point range!")
     sys.exit()
@@ -389,7 +391,7 @@ def createPredictedSecondaryStructureTopic(apt_mid, dbn, mfe, aServiceUrl, anHtt
     }
   }
   p = makeRequestBody(someCredentials, q)
-  pss_mid = runQuery(p, aServiceUrl, anHttp)
+  pss_mid = runWriteQuery(p, aServiceUrl, anHttp)
   if pss_mid == None:
     raise Exception("Could not create predicted secondary structure topic!")
     sys.exit()
@@ -410,7 +412,7 @@ def createDissociationConstantTopic(aff_exp_mid, aServiceUrl, anHttp, someCreden
     }
   }
   params = makeRequestBody(someCredentials, q)
-  kd_mid = runQuery(params, aServiceUrl, anHttp)
+  kd_mid = runWriteQuery(params, aServiceUrl, anHttp)
   if kd_mid == None:
     raise Exception("Cannot create kd topic!")
     sys.exit()
@@ -432,7 +434,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
     "c:type" : "/base/aptamer/interaction_experiment",
   }
   params = makeRequestBody(someCredentials, q)
-  se_mid = runQuery(params, aServiceUrl, anHttp)
+  se_mid = runWriteQuery(params, aServiceUrl, anHttp)
   if se_mid:
     rm["mid"]= se_mid
     #now create the partitioning and recovery methods and attach them 
@@ -445,7 +447,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "/base/aptamer/partitioning_method/is_partitioning_method_of":{"connect":"insert", "mid":se_mid}
     }
     params = makeRequestBody(someCredentials, q)
-    pm_mid = runQuery(params, aServiceUrl, anHttp)
+    pm_mid = runWriteQuery(params, aServiceUrl, anHttp)
     rm["partitioning_method"] = pm_mid
     #create a recovery method topic
     q = {
@@ -454,7 +456,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "/base/aptamer/recovery_method_se/is_recovery_method_of":{"connect":"insert", "mid":se_mid}
     }
     params = makeRequestBody(someCredentials, q)
-    rm_mid = runQuery(params, aServiceUrl, anHttp)
+    rm_mid = runWriteQuery(params, aServiceUrl, anHttp)
     rm["recovery_method"] = rm_mid
     #create an empty selex condition topic
     q = {
@@ -464,7 +466,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
       "/base/aptamer/experimental_conditions/are_experimental_conditions_of":{"connect":"insert", "mid":se_mid}
     }
     params = makeRequestBody(someCredentials, q)
-    sc_mid = runQuery(params, aServiceUrl, anHttp)
+    sc_mid = runWriteQuery(params, aServiceUrl, anHttp)
     rm["selex_conditions"] = sc_mid
     if sc_mid:
       #create a selection solution and attach it to the selex conditions topic
@@ -474,7 +476,7 @@ def createSelexExperimentTopic(aServiceUrl, anHttp, someCredentials):
         "/base/aptamer/selection_solution/is_selection_solution_of_sc":{"connect":"insert", "mid":sc_mid}
       }
       params = makeRequestBody(someCredentials, q)
-      ss_mid = runQuery(params, aServiceUrl, anHttp)
+      ss_mid = runWriteQuery(params, aServiceUrl, anHttp)
       rm["selection_solution"] = ss_mid
       if not ss_mid:
         raise Exception ("Could not create selection solution!")
@@ -495,7 +497,18 @@ def makeRequestBody(someCredentials, aQuery):
   }
   return p
 
-def runQuery(someParams, aServiceUrl, anHttp, firstOnly=False):
+def runReadQuery(aQuery, anHttp):
+  s = 'https://www.googleapis.com/freebase/v1/mqlread'
+  q = json.dumps(aQuery)
+  url = s+'?query='+urllib.quote_plus(q)
+  resp, content = anHttp.request(url)
+  if resp["status"] == '200':
+    r = json.loads(content)
+    return r["result"]
+  else:
+    return None
+
+def runWriteQuery(someParams, aServiceUrl, anHttp, firstOnly=False):
   url = aServiceUrl+'?'+urllib.urlencode(someParams)
   resp, content = anHttp.request(url)
   if resp["status"] == '200':
@@ -549,7 +562,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
           }
         }
         p = makeRequestBody(someCredentials, q)
-        r = runQuery(p, aServiceUrl, anHttp)
+        r = runWriteQuery(p, aServiceUrl, anHttp)
         if r == None:
           raise Exception("Could not create kd topic!")
           sys.exit()
@@ -578,7 +591,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             }
           }
           p = makeRequestBody(someCredentials, q)
-          r = runQuery(p, aServiceUrl, anHttp)
+          r = runWriteQuery(p, aServiceUrl, anHttp)
           if r == None:
             raise Exception("Could not create range topic")
             sys.exit()
@@ -597,7 +610,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
               }
             }
             p = makeRequestBody(someCredentials, q)
-            r = runQuery(p, aServiceUrl, anHttp)
+            r = runWriteQuery(p, aServiceUrl, anHttp)
             if r == None:
               raise Exception("Could not connect kd to range value")
               sys.exit()
@@ -619,7 +632,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
           }
         }
         p = makeRequestBody(someCredentials, q)
-        r = runQuery(p, aServiceUrl, anHttp)
+        r = runWriteQuery(p, aServiceUrl, anHttp)
         if r == None:
           raise Exception("Could not add kd error")
           sys.exit()
@@ -641,7 +654,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             }
           }
           params = makeRequestBody(someCredentials, q)
-          r = runQuery(params, aServiceUrl, anHttp)
+          r = runWriteQuery(params, aServiceUrl, anHttp)
           if r == None:
             raise Exception("Could not add affinity method "+ afn)
             sys.exit()
@@ -660,7 +673,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             }
           }
           params = makeRequestBody(someCredentials, q)
-          r = runQuery(params, aServiceUrl, anHttp)
+          r = runWriteQuery(params, aServiceUrl, anHttp)
           if r == None:
             raise Exception ("Could not add buffering agent to binding solution")
             sys.exit()
@@ -673,7 +686,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
           }
         }
         p = makeRequestBody(someCredentials, q)
-        r = runQuery(p, aServiceUrl, anHttp)
+        r = runWriteQuery(p, aServiceUrl, anHttp)
         if r == None:
           raise Exception("Could not add buffering agent to binding solution! errono 99")
           sys.exit()   
@@ -689,7 +702,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             }
           }
           params = makeRequestBody(someCredentials, q)
-          r = runQuery(params, aServiceUrl, anHttp)
+          r = runWriteQuery(params, aServiceUrl, anHttp)
           if r == None:
             raise Exception ("Could not add ionic strength to binding solution!")
             sys.exit()
@@ -706,7 +719,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
           }
         }
         p = makeRequestBody(someCredentials, q)
-        r = runQuery(p, aServiceUrl, anHttp)
+        r = runWriteQuery(p, aServiceUrl, anHttp)
         if r == None:
           raise Exception ("Could not add ph")
           sys.exit()
@@ -723,7 +736,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
           }
         }
         p = makeRequestBody(someCredentials, q)
-        r = runQuery(p, aServiceUrl, anHttp)
+        r = runWriteQuery(p, aServiceUrl, anHttp)
         if r == None:
           raise Exception ("Could not add temperature")
           sys.exit()
@@ -758,7 +771,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             }
           }
           p = makeRequestBody(someCredentials, q)
-          r = runQuery(p, aServiceUrl, anHttp)
+          r = runWriteQuery(p, aServiceUrl, anHttp)
           if r == None:
             raise Exception("Could not add mutational_analysis ")
             sys.exit()
@@ -776,7 +789,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
               }
             }
             p = makeRequestBody(someCredentials, q)
-            r = runQuery(p, aServiceUrl, anHttp)
+            r = runWriteQuery(p, aServiceUrl, anHttp)
             if r == None:
               raise Exception("Could not add secondary strucutres")
               sys.exit()
@@ -793,7 +806,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             }
           }
           p = makeRequestBody(someCredentials, q)
-          r = runQuery(p, aServiceUrl, anHttp)
+          r = runWriteQuery(p, aServiceUrl, anHttp)
           if r == None:
             raise Exception("Could not add application")
             sys.exit()
@@ -810,7 +823,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
             }
           }
           p = makeRequestBody(someCredentials, q)
-          r = runQuery(p, aServiceUrl, anHttp)
+          r = runWriteQuery(p, aServiceUrl, anHttp)
           if r == None:
             raise Exception("Could not add sequence pattern")
             sys.exit()
@@ -828,7 +841,7 @@ def addInteractions(aSelexExperimentMid,cleanJson, aServiceUrl, anHttp, someCred
         }
       }
       p = makeRequestBody(someCredentials, q)
-      r = runQuery(p, aServiceUrl, anHttp)
+      r = runWriteQuery(p, aServiceUrl, anHttp)
       if r == None:
         raise Exception("Could not add intercaction type")
         sys.exit()
@@ -853,7 +866,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! 9984")
       sys.exit()
   except KeyError:
@@ -883,7 +896,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
         }
       }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! 99843234")
       sys.exit()
   
@@ -903,7 +916,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! 4830943")
       sys.exit()
   except KeyError:
@@ -919,7 +932,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! 4830943")
       sys.exit()
   except KeyError:
@@ -935,7 +948,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! 43543543")
       sys.exit()
   except KeyError:
@@ -953,7 +966,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
         }
       }
       params = makeRequestBody(someCredentials, q)
-      if runQuery(params, aServiceUrl, anHttp) == None:
+      if runWriteQuery(params, aServiceUrl, anHttp) == None:
         raise Exception ("Could not run query! 98327492387423")
         sys.exit()
   except KeyError:
@@ -965,7 +978,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
       }
     }
     p = makeRequestBody(someCredentials, q)
-    r = runQuery(p, aServiceUrl, anHttp)
+    r = runWriteQuery(p, aServiceUrl, anHttp)
     if r == None:
       raise Exception("Could not add buffering agent to binding solution! errono 99")
       sys.exit()
@@ -982,7 +995,7 @@ def addSelexConditions(anMidDict, cleanJson, aServiceUrl, anHttp, someCredential
         }
       }
       params = makeRequestBody(someCredentials, q)
-      if runQuery(params, aServiceUrl, anHttp) == None:
+      if runWriteQuery(params, aServiceUrl, anHttp) == None:
         raise Exception ("Could not run query! 98327492387423")
         sys.exit()
   except KeyError:
@@ -1006,7 +1019,7 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
         }
       }
       params = makeRequestBody(someCredentials, q)
-      if runQuery(params, aServiceUrl, anHttp) == None:
+      if runWriteQuery(params, aServiceUrl, anHttp) == None:
         raise Exception("Could not run query! 500-3")
         sys.exit()
   except KeyError:
@@ -1024,7 +1037,7 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
         } 
       }
       params = makeRequestBody(someCredentials, q)
-      if runQuery(params, aServiceUrl, anHttp) == None:
+      if runWriteQuery(params, aServiceUrl, anHttp) == None:
         raise Exception("Could not run query! 113")
         sys.exit()
   except KeyError:
@@ -1036,7 +1049,7 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
       }
     }
     p = makeRequestBody(someCredentials, q)
-    if runQuery(p, aServiceUrl, anHttp) == None:
+    if runWriteQuery(p, aServiceUrl, anHttp) == None:
       raise Exception ("Could not add default partitioning_method")
       sys.exit()
     pass
@@ -1053,7 +1066,7 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
           }
       }
       p = makeRequestBody(someCredentials, q)
-      if runQuery(p, aServiceUrl, anHttp) == None:
+      if runWriteQuery(p, aServiceUrl, anHttp) == None:
         raise Exception("Could not run query! 324")
         sys.exit()
   except KeyError:
@@ -1065,7 +1078,7 @@ def addSelexDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentials):
       }
     }
     p = makeRequestBody(someCredentials, q)
-    if runQuery(p, aServiceUrl, anHttp) == None:
+    if runWriteQuery(p, aServiceUrl, anHttp) == None:
       raise Exception("Could not add default recovery method!")
       sys.exit()
 
@@ -1101,7 +1114,7 @@ def addAffinityExperimentReferenceDetails(anAffinityExperimentMid, aServiceUrl, 
       }
     }
     p = makeRequestBody(someCredentials, q)
-    r = runQuery(p, aServiceUrl, anHttp)
+    r = runWriteQuery(p, aServiceUrl, anHttp)
     if r == None:
       raise Exception("Could not add pmid@")
       sys.exit()
@@ -1119,7 +1132,7 @@ def addAffinityExperimentReferenceDetails(anAffinityExperimentMid, aServiceUrl, 
       }
     }
     params = makeRequestBody(someCredentials, q)
-    r = runQuery(params, aServiceUrl, anHttp)
+    r = runWriteQuery(params, aServiceUrl, anHttp)
     if r == None:
       raise Exception("Could not run query! oi23442h")
       sys.exit()
@@ -1136,7 +1149,7 @@ def addAffinityExperimentReferenceDetails(anAffinityExperimentMid, aServiceUrl, 
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       raise Exception("Could not run query! #dslk33fj")
       sys.exit()
   except KeyError:
@@ -1157,7 +1170,7 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       raise Exception ("Could not run query! #2433211.3")
       sys.exit()
   except KeyError:
@@ -1175,7 +1188,7 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
       }
     }
     params = makeRequestBody(someCredentials, q)
-    r = runQuery(params, aServiceUrl, anHttp)
+    r = runWriteQuery(params, aServiceUrl, anHttp)
     if r == None:
       raise Exception("Could not run query! oi42h")
       sys.exit()
@@ -1193,7 +1206,7 @@ def addReferenceDetails(anMidDict, cleanJson, aServiceUrl, anHttp, someCredentia
       }
     }
     params = makeRequestBody(someCredentials, q)
-    if runQuery(params, aServiceUrl, anHttp) == None:
+    if runWriteQuery(params, aServiceUrl, anHttp) == None:
       raise Exception("Could not run query! #dslkfj")
       sys.exit()
   except KeyError:
