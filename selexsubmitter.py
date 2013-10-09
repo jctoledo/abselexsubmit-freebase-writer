@@ -316,7 +316,14 @@ def checkFreebaseForChemicalCompound(aName, anHttp):
     q = [{
       "mid":None,
       "name": str(aName),
-      "type":"/chemistry/chemical_compound"
+      "type|=":[
+        "/chemistry/chemical_compound",
+        "/medicine/drug_brand",
+        "/biology/protein",
+        "/medicine/drug",
+        "/medicine/medical_treatment",
+        "/medicine/drug_ingredient"
+        ]
     }]
     r = runReadQuery(q, anHttp)
     if r == None :
